@@ -6,15 +6,22 @@ import (
 	"mime/multipart"
 	"reflect"
 
+	"github.com/qor/qor"
 	"github.com/jinzhu/gorm"
 	"github.com/qor/serializable_meta"
 )
+
+func fieldOption(field *gorm.Field) *Option {
+	return parseTagOption(field.Tag.Get("media_library"))
+}
 
 func cropField(field *gorm.Field, scope *gorm.Scope) (cropped bool) {
 	if field.Field.CanAddr() {
 		// TODO Handle scanner
 		if media, ok := field.Field.Addr().Interface().(Media); ok && !media.Cropped() {
-			option := parseTagOption(field.Tag.Get("media_library"))
+			media.Init(qor.ContextFromDB(scope.DB()).Site, field)
+			option := media.FieldOption()
+
 			if media.GetFileHeader() != nil || media.NeedCrop() {
 				var file multipart.File
 				var err error
@@ -31,7 +38,7 @@ func cropField(field *gorm.Field, scope *gorm.Scope) (cropped bool) {
 
 				media.Cropped(true)
 
-				if url := media.GetURL(option, scope, field, media); url == "" {
+				if url := media.GetURL(scope, field, media); url == "" {
 					scope.Err(errors.New("invalid URL"))
 				} else {
 					result, _ := json.Marshal(map[string]string{"Url": url})
@@ -52,7 +59,7 @@ func cropField(field *gorm.Field, scope *gorm.Scope) (cropped bool) {
 
 					// Save File
 					if !handled {
-						scope.Err(media.Store(media.URL(), option, file))
+						scope.Err(media.Store(media.URL(), file))
 					}
 				}
 				return true

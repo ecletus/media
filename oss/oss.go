@@ -3,66 +3,100 @@ package oss
 import (
 	"io"
 	"os"
-	"strings"
+	"fmt"
+	"path/filepath"
 
 	"github.com/qor/media"
-	"github.com/qor/oss"
+	"github.com/qor/qor"
 	"github.com/qor/oss/filesystem"
+	"github.com/qor/oss"
+	manager "github.com/qor/oss/manager"
 )
 
 var (
 	// Storage the storage used to save medias
-	Storage oss.StorageInterface = filesystem.New("public")
+	FileSystemStorage = filesystem.New(filepath.Join(qor.CONFIG().Root(), "public"))
 	// URLTemplate default URL template
 	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
 )
+
+func init()  {
+	manager.Storages.Default = FileSystemStorage
+	manager.Storages.DefaultFS = FileSystemStorage
+}
+
+const OPTION_KEY = "storage"
+
+func DefaultFilesystemStorage() *filesystem.FileSystem  {
+	return FileSystemStorage
+}
+
 
 // OSS common storage interface
 type OSS struct {
 	media.Base
 }
 
-// DefaultURLTemplateHandler used to generate URL and save into database
-var DefaultURLTemplateHandler = func(option *media.Option) (url string) {
-	if url = option.Get("URL"); url == "" {
-		url = URLTemplate
-	}
-
-	url = strings.Join([]string{strings.TrimSuffix(Storage.GetEndpoint(), "/"), strings.TrimPrefix(url, "/")}, "/")
-	if strings.HasPrefix(url, "/") {
-		return url
-	}
-
-	for _, prefix := range []string{"https://", "http://"} {
-		url = strings.TrimPrefix(url, prefix)
-	}
-
-	// convert `getqor.com/hello` => `//getqor.com/hello`
-	return "//" + url
-}
-
-// GetURLTemplate URL's template
-func (OSS) GetURLTemplate(option *media.Option) (url string) {
-	return DefaultURLTemplateHandler(option)
-}
-
 // DefaultStoreHandler used to store reader with default Storage
-var DefaultStoreHandler = func(path string, option *media.Option, reader io.Reader) error {
-	_, err := Storage.Put(path, reader)
+var DefaultStoreHandler = func(storage oss.StorageInterface, path string, option *media.Option, reader io.Reader) error {
+	_, err := storage.Put(path, reader)
 	return err
 }
 
 // Store save reader's content with path
-func (OSS) Store(path string, option *media.Option, reader io.Reader) error {
-	return DefaultStoreHandler(path, option, reader)
+func (o *OSS) Store(path string, reader io.Reader) error {
+	return DefaultStoreHandler(o.Storage(), path, o.FieldOption(), reader)
+}
+
+// DefaultRemoveHandler used to store reader with default Storage
+var DefaultRemoveHandler = func(storage oss.StorageInterface, path string, option *media.Option) error {
+	return storage.Delete(path)
+}
+
+// Remove content by path
+func (o *OSS) Remove(path string) error {
+	return DefaultRemoveHandler(o.Storage(), path, o.FieldOption())
+}
+
+func (o *OSS) RemoveOld() (found bool, err error) {
+	if o.Old != nil {
+		remove := func(url string) (bool, error) {
+			_, notFound, err := o.Storage().Stat(url)
+			if err != nil {
+				return true, fmt.Errorf("Get stat for %q fail: %v", url, err)
+			}
+			if notFound {
+				return false, nil
+			}
+			err = o.Remove(url)
+			if err != nil {
+				return true, fmt.Errorf("Remove %q fail: %v", url, err)
+			}
+			return true, nil
+		}
+		old := o.Old()
+		found, err = remove(old.Url)
+		if err != nil {
+			return found, err
+		}
+		if found {
+			for _, key := range old.Names() {
+				_, err = remove(media.MediaStyleURL(old.Url, key))
+				if err != nil {
+					return true, err
+				}
+			}
+		}
+	}
+	return
 }
 
 // DefaultRetrieveHandler used to retrieve file
-var DefaultRetrieveHandler = func(path string) (*os.File, error) {
-	return Storage.Get(path)
+var DefaultRetrieveHandler = func(storage oss.StorageInterface, option *media.Option, path string) (*os.File, error) {
+	return storage.Get(path)
 }
 
 // Retrieve retrieve file content with url
-func (OSS) Retrieve(path string) (*os.File, error) {
-	return DefaultRetrieveHandler(path)
+func (o *OSS) Retrieve(path string) (*os.File, error) {
+	return DefaultRetrieveHandler(o.Storage(), o.FieldOption(), path)
 }

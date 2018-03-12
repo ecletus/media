@@ -16,6 +16,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"strconv"
 
 	"github.com/gosimple/slug"
 	"github.com/jinzhu/gorm"
@@ -24,6 +25,7 @@ import (
 	"github.com/qor/qor"
 	"github.com/qor/qor/resource"
 	"github.com/qor/qor/utils"
+	"github.com/qor/oss"
 )
 
 // CropOption includes crop options
@@ -48,26 +50,77 @@ func (fileWrapper *fileWrapper) Open() (multipart.File, error) {
 type Base struct {
 	FileName    string
 	Url         string
+	FileSize    int64
 	CropOptions map[string]*CropOption `json:",omitempty"`
 	Delete      bool                   `json:"-"`
 	Crop        bool                   `json:"-"`
 	FileHeader  FileHeader             `json:"-"`
 	Reader      io.Reader              `json:"-"`
 	cropped     bool
+	site        qor.SiteInterface
+	storage     oss.StorageInterface
+	field       *gorm.Field
+	fieldOption *Option
+	old         *Old                   `json:"-"`
+}
+
+func (b *Base) Old() *Old {
+	return b.old
+}
+
+func (b *Base) Names() (names []string) {
+	return names
+}
+
+func (b *Base) Site() qor.SiteInterface {
+	return b.site
+}
+
+func (b *Base) SetSite(site qor.SiteInterface) {
+	b.site = site
+}
+
+func (b *Base) Storage() oss.StorageInterface {
+	return b.storage
+}
+
+func (b *Base) SetStorage(storage oss.StorageInterface) {
+	b.storage = storage
+}
+
+func (b *Base) FieldOption() *Option {
+	return b.fieldOption
+}
+
+func (b *Base) SetFieldOption(option *Option) {
+	b.fieldOption = option
+}
+
+func (b *Base) SetFile(fileName string, fileSize int64, fileHeader FileHeader) {
+	if b.FileName != "" {
+		b.old = &Old{b.Url, make(map[string]int)}
+		b.old.AddName(b.Names()...)
+	}
+	b.FileName = fileName
+	b.FileHeader = fileHeader
+	b.FileSize = fileSize
+	b.CropOptions = make(map[string]*CropOption)
 }
 
 // Scan scan files, crop options, db values into struct
 func (b *Base) Scan(data interface{}) (err error) {
 	switch values := data.(type) {
 	case *os.File:
-		b.FileHeader = &fileWrapper{values}
-		b.FileName = filepath.Base(values.Name())
+		stat, err := values.Stat()
+		if err != nil {
+			return err
+		}
+		b.SetFile(filepath.Base(values.Name()), stat.Size(), &fileWrapper{values})
 	case *multipart.FileHeader:
-		b.FileHeader, b.FileName = values, values.Filename
+		b.SetFile(values.Filename, values.Size, values)
 	case []*multipart.FileHeader:
 		if len(values) > 0 {
-			file := values[0]
-			b.FileHeader, b.FileName = file, file.Filename
+			return b.Scan(values[0])
 		}
 	case []byte:
 		if string(values) != "" {
@@ -124,10 +177,26 @@ func (b Base) Ext() string {
 // URL return file's url with given style
 func (b Base) URL(styles ...string) string {
 	if b.Url != "" && len(styles) > 0 {
-		ext := path.Ext(b.Url)
-		return fmt.Sprintf("%v.%v%v", strings.TrimSuffix(b.Url, ext), styles[0], ext)
+		return MediaStyleURL(b.Url, styles[0])
 	}
 	return b.Url
+}
+
+// gorm/scope.scan()
+func (b *Base) AfterScan(db *gorm.DB, field *gorm.Field) {
+	b.Init(qor.GetSiteFromDB(db), field)
+}
+
+func (b *Base) Init(site qor.SiteInterface, field *gorm.Field) {
+	if b.site == nil {
+		b.site = site
+	}
+	if b.fieldOption == nil {
+		b.fieldOption = fieldOption(field)
+	}
+	if b.storage == nil {
+		b.storage = b.site.GetMediaStorageOrDefault(b.fieldOption.Get("storage"))
+	}
 }
 
 // String return file's url
@@ -147,10 +216,23 @@ func (b Base) GetFileHeader() FileHeader {
 
 // GetURLTemplate get url template
 func (b Base) GetURLTemplate(option *Option) (path string) {
-	if path = option.Get("URL"); path == "" {
+	if path = b.fieldOption.Get("URL"); path == "" {
 		path = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
 	}
 	return
+}
+
+func (b Base) FullURL(styles ...string) (url string) {
+	url = strings.TrimSuffix(strings.Join([]string{b.storage.GetEndpoint(),
+		strings.TrimPrefix(b.URL(styles...), "/")}, "/"), "/")
+	if strings.HasPrefix(url, "/") {
+		return url
+	}
+	return MediaURL(url)
+}
+
+func (b Base) FullURLU(styles ...string) (url string) {
+	return b.FullURL(styles...) + "?_=" + strconv.Itoa(time.Now().Nanosecond())
 }
 
 var urlReplacer = regexp.MustCompile("(\\s|\\+)+")
@@ -172,8 +254,8 @@ func getFuncMap(scope *gorm.Scope, field *gorm.Field, filename string) template.
 }
 
 // GetURL get default URL for a model based on its options
-func (b Base) GetURL(option *Option, scope *gorm.Scope, field *gorm.Field, templater URLTemplater) string {
-	if path := templater.GetURLTemplate(option); path != "" {
+func (b Base) GetURL(scope *gorm.Scope, field *gorm.Field, templater URLTemplater) string {
+	if path := templater.GetURLTemplate(b.fieldOption); path != "" {
 		tmpl := template.New("").Funcs(getFuncMap(scope, field, b.GetFileName()))
 		if tmpl, err := tmpl.Parse(path); err == nil {
 			var result = bytes.NewBufferString("")
@@ -234,7 +316,9 @@ func (b Base) IsSVG() bool {
 }
 
 func init() {
-	admin.RegisterViewPath("github.com/qor/media/views")
+	qor.IfDev(func() {
+		admin.RegisterViewPath("github.com/qor/media/views")
+	})
 }
 
 // ConfigureQorMetaBeforeInitialize configure this field for Qor Admin

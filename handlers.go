@@ -5,9 +5,10 @@ import (
 	"image"
 	"image/draw"
 	"image/gif"
+	"image/png"
+	_ "image/jpeg"
 	"io/ioutil"
 	"mime/multipart"
-
 	"github.com/disintegration/imaging"
 )
 
@@ -31,12 +32,26 @@ func (imageHandler) CouldHandle(media Media) bool {
 	return media.IsImage()
 }
 
+func init() {
+	// damn important or else At(), Bounds() functions will
+	// caused memory pointer error!!
+	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+}
+
 func (imageHandler) Handle(media Media, file multipart.File, option *Option) (err error) {
 	var fileBuffer bytes.Buffer
 	if fileBytes, err := ioutil.ReadAll(file); err == nil {
+		if media.Old() != nil {
+			media.Old().AddName("original")
+			_, err = media.RemoveOld()
+			if err != nil {
+				return err
+			}
+		}
+
 		fileBuffer.Write(fileBytes)
 
-		if err = media.Store(media.URL("original"), option, &fileBuffer); err == nil {
+		if err = media.Store(media.URL("original"), &fileBuffer); err == nil {
 			file.Seek(0, 0)
 
 			if format, err := getImageFormat(media.URL()); err == nil {
@@ -56,7 +71,7 @@ func (imageHandler) Handle(media Media, file multipart.File, option *Option) (er
 						}
 
 						gif.EncodeAll(&buffer, g)
-						media.Store(media.URL(), option, &buffer)
+						media.Store(media.URL(), &buffer)
 					} else {
 						return err
 					}
@@ -79,10 +94,23 @@ func (imageHandler) Handle(media Media, file multipart.File, option *Option) (er
 							g.Config.Width = size.Width
 							g.Config.Height = size.Height
 							gif.EncodeAll(&result, g)
-							media.Store(media.URL(key), option, &result)
+							media.Store(media.URL(key), &result)
 						}
 					}
 				} else {
+					/*tmp, err := os.Create("tmp.png")
+					defer tmp.Close()
+					io.Copy(tmp, file)
+
+					_, err = png.Decode(file)
+					if err != nil {
+						fmt.Println("PNG DECODE ERROR: ", err)
+						fmt.Println("PNG DECODE ERROR: ", file.Read)
+						return err
+					}
+					*/
+					///return toNRGBA(img), nil
+
 					if img, err := imaging.Decode(file); err == nil {
 						// save original image
 						if cropOption := media.GetCropOption("original"); cropOption != nil {
@@ -92,7 +120,7 @@ func (imageHandler) Handle(media Media, file multipart.File, option *Option) (er
 						// Save default image
 						var buffer bytes.Buffer
 						imaging.Encode(&buffer, img, *format)
-						media.Store(media.URL(), option, &buffer)
+						media.Store(media.URL(), &buffer)
 
 						// save sizes image
 						for key, size := range media.GetSizes() {
@@ -104,7 +132,7 @@ func (imageHandler) Handle(media Media, file multipart.File, option *Option) (er
 							dst := imaging.Thumbnail(newImage, size.Width, size.Height, imaging.Lanczos)
 							var buffer bytes.Buffer
 							imaging.Encode(&buffer, dst, *format)
-							media.Store(media.URL(key), option, &buffer)
+							media.Store(media.URL(key), &buffer)
 						}
 					} else {
 						return err

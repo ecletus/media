@@ -1,6 +1,8 @@
 package media
 
 import (
+	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -65,4 +67,32 @@ func IsSVGFormat(name string) bool {
 func parseTagOption(str string) *Option {
 	option := Option(utils.ParseTagOption(str))
 	return &option
+}
+
+func MediaURL(base string, parts ...string) string {
+	base = strings.TrimSuffix(base, "/")
+
+	for _, prefix := range []string{"https://", "http://"} {
+		base = strings.TrimPrefix(base, prefix)
+	}
+
+	base = "//" + base
+
+	if len(parts) == 0 {
+		return base
+	}
+
+	base += "/"
+
+	for i, p := range parts {
+		parts[i] = strings.Trim(p, "/")
+	}
+
+	url := strings.Join(parts, "/")
+	return base + url
+}
+
+func MediaStyleURL(url, style string) string {
+	ext := path.Ext(url)
+	return fmt.Sprintf("%v.%v%v", strings.TrimSuffix(url, ext), style, ext)
 }

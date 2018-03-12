@@ -15,12 +15,15 @@ import (
 	"github.com/qor/media"
 	"github.com/qor/media/oss"
 	"github.com/qor/qor"
+	"github.com/qor/qor/db"
 	"github.com/qor/qor/resource"
 	"github.com/qor/qor/utils"
 )
 
 func init() {
-	admin.RegisterViewPath("github.com/qor/media/media_library/views")
+	qor.IfDev(func() {
+		admin.RegisterViewPath("github.com/qor/media/media_library/views")
+	})
 }
 
 type MediaLibraryInterface interface {
@@ -28,6 +31,7 @@ type MediaLibraryInterface interface {
 	SetSelectedType(string)
 	GetSelectedType() string
 	GetMediaOption() MediaOption
+	Init(site qor.SiteInterface)
 }
 
 type MediaLibrary struct {
@@ -46,6 +50,11 @@ type MediaOption struct {
 	SelectedType string                       `json:",omitempty"`
 	Description  string                       `json:",omitempty"`
 	Crop         bool
+}
+
+
+func (mediaLibrary *MediaLibrary) Init(site qor.SiteInterface) {
+	mediaLibrary.File.Init(site, db.FieldCache.Get(mediaLibrary, "File"))
 }
 
 func (mediaLibrary *MediaLibrary) ScanMediaOptions(mediaOption MediaOption) error {
@@ -93,6 +102,24 @@ type MediaLibraryStorage struct {
 	Description  string
 }
 
+func (mediaLibraryStorage *MediaLibraryStorage) RemoveOld() (found bool, err error) {
+	if mediaLibraryStorage.Old != nil {
+		for name, _:= range mediaLibraryStorage.GetSizes() {
+			mediaLibraryStorage.Old().AddName(name)
+		}
+	}
+	return mediaLibraryStorage.OSS.RemoveOld()
+}
+// gorm/scope.scan()
+func (mediaLibraryStorage *MediaLibraryStorage) AfterScan(db *gorm.DB, field *gorm.Field) {
+	mediaLibraryStorage.OSS.AfterScan(db, field)
+}
+
+func (mediaLibraryStorage MediaLibraryStorage) Names() []string {
+	names := mediaLibraryStorage.OSS.Names()
+	return append(names, "@qor_preview")
+}
+
 func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*media.Size {
 	if len(mediaLibraryStorage.Sizes) == 0 && !(mediaLibraryStorage.GetFileHeader() != nil || mediaLibraryStorage.Crop) {
 		return map[string]*media.Size{}
@@ -106,6 +133,18 @@ func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*media.Size
 		sizes[key] = value
 	}
 	return sizes
+}
+
+func (mediaLibraryStorage *MediaLibraryStorage) MetaScan(data interface{}) (err error) {
+	err = mediaLibraryStorage.Scan(data)
+	if err != nil {
+		return err
+	}
+	if mediaLibraryStorage.Url != "" {
+		endpoint := media.MediaURL(mediaLibraryStorage.Storage().GetEndpoint())
+		mediaLibraryStorage.Url = strings.TrimPrefix(mediaLibraryStorage.Url, endpoint)
+	}
+	return nil
 }
 
 func (mediaLibraryStorage *MediaLibraryStorage) Scan(data interface{}) (err error) {
@@ -158,6 +197,14 @@ func (mediaLibraryStorage *MediaLibraryStorage) Scan(data interface{}) (err erro
 }
 
 func (mediaLibraryStorage MediaLibraryStorage) Value() (driver.Value, error) {
+	results, err := json.Marshal(mediaLibraryStorage)
+	return string(results), err
+}
+
+func (mediaLibraryStorage MediaLibraryStorage) Export() (string, error) {
+	if mediaLibraryStorage.Storage() != nil {
+		mediaLibraryStorage.Url = media.MediaURL(mediaLibraryStorage.Storage().GetEndpoint(), mediaLibraryStorage.Url)
+	}
 	results, err := json.Marshal(mediaLibraryStorage)
 	return string(results), err
 }
@@ -231,18 +278,20 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				if mediaLibraryResource == nil {
 					mediaLibraryResource = Admin.NewResource(&MediaLibrary{})
 				}
-				config.RemoteDataResource = mediaLibraryResource
+				config.RemoteDataResource = admin.NewDataResource(mediaLibraryResource)
 			}
 
-			if _, ok := config.RemoteDataResource.Value.(MediaLibraryInterface); !ok {
-				utils.ExitWithMsg("%v havn't implement MediaLibraryInterface, please fix that.", reflect.TypeOf(config.RemoteDataResource.Value))
+			if _, ok := config.RemoteDataResource.Resource.Value.(MediaLibraryInterface); !ok {
+				utils.ExitWithMsg("%v havn't implement MediaLibraryInterface, please fix that.",
+					reflect.TypeOf(config.RemoteDataResource.Resource.Value))
 			}
 
-			config.RemoteDataResource.Meta(&admin.Meta{
+			config.RemoteDataResource.Resource.Meta(&admin.Meta{
 				Name: "MediaOption",
 				Type: "hidden",
 				Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
+						mediaLibrary.Init(context.Site)
 						var mediaOption MediaOption
 						if err := json.Unmarshal([]byte(utils.ToString(metaValue.Value)), &mediaOption); err == nil {
 							mediaOption.FileName = ""
@@ -262,7 +311,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				},
 			})
 
-			config.RemoteDataResource.Meta(&admin.Meta{
+			config.RemoteDataResource.Resource.Meta(&admin.Meta{
 				Name: "SelectedType",
 				Type: "hidden",
 				Valuer: func(record interface{}, context *qor.Context) interface{} {
@@ -273,8 +322,9 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				},
 			})
 
-			config.RemoteDataResource.AddProcessor(func(record interface{}, metaValues *resource.MetaValues, context *qor.Context) error {
+			config.RemoteDataResource.Resource.AddProcessor(func(record interface{}, metaValues *resource.MetaValues, context *qor.Context) error {
 				if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
+					mediaLibrary.Init(context.Site)
 					var filename string
 					var mediaOption MediaOption
 
@@ -306,14 +356,14 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				return nil
 			})
 
-			config.RemoteDataResource.UseTheme("grid")
-			config.RemoteDataResource.UseTheme("media_library")
-			if config.RemoteDataResource.Config.PageCount == 0 {
-				config.RemoteDataResource.Config.PageCount = admin.PaginationPageCount / 2 * 3
+			config.RemoteDataResource.Resource.UseTheme("grid")
+			config.RemoteDataResource.Resource.UseTheme("media_library")
+			if config.RemoteDataResource.Resource.Config.PageCount == 0 {
+				config.RemoteDataResource.Resource.Config.PageCount = admin.PaginationPageCount / 2 * 3
 			}
-			config.RemoteDataResource.IndexAttrs(config.RemoteDataResource.IndexAttrs(), "-MediaOption")
-			config.RemoteDataResource.NewAttrs(config.RemoteDataResource.NewAttrs(), "MediaOption")
-			config.RemoteDataResource.EditAttrs(config.RemoteDataResource.EditAttrs(), "MediaOption")
+			config.RemoteDataResource.Resource.IndexAttrs(config.RemoteDataResource.Resource.IndexAttrs(), "-MediaOption")
+			config.RemoteDataResource.Resource.NewAttrs(config.RemoteDataResource.Resource.NewAttrs(), "MediaOption")
+			config.RemoteDataResource.Resource.EditAttrs(config.RemoteDataResource.Resource.EditAttrs(), "MediaOption")
 
 			config.SelectManyConfig.RemoteDataResource = config.RemoteDataResource
 			config.SelectManyConfig.ConfigureQorMeta(meta)
@@ -352,10 +402,10 @@ func (file File) URL(styles ...string) string {
 	return file.Url
 }
 
-func (mediaBox MediaBox) Crop(res *admin.Resource, db *gorm.DB, mediaOption MediaOption) (err error) {
+func (mediaBox MediaBox) Crop(context *qor.Context, res *admin.Resource, db *gorm.DB, mediaOption MediaOption) (err error) {
 	for _, file := range mediaBox.Files {
 		context := &qor.Context{ResourceID: string(file.ID), DB: db}
-		record := res.NewStruct()
+		record := res.NewStruct(context.Site)
 		if err = res.CallFindOne(record, nil, context); err == nil {
 			if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 				mediaOption.Crop = true
@@ -375,7 +425,7 @@ func (mediaBox MediaBox) Crop(res *admin.Resource, db *gorm.DB, mediaOption Medi
 
 // MediaBoxConfig configure MediaBox metas
 type MediaBoxConfig struct {
-	RemoteDataResource *admin.Resource
+	RemoteDataResource *admin.DataResource
 	Sizes              map[string]*media.Size
 	Max                uint
 	admin.SelectManyConfig

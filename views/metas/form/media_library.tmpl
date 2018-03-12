@@ -42,7 +42,7 @@
 
     <!-- Start: other files form -->
     <div class="qor-fieldset" data-tab-source="file" {{if (eq $value.SelectedType "video_link")}} style="display: none;" {{end}}>
-      <textarea class="qor-file__options hidden" data-cropper-title="{{t "qor_media_library.form.crop_image" "Crop image"}}" data-cropper-cancel="{{t "qor_media_library.form.cancel" "Cancel"}}" data-cropper-ok="{{t "qor_media_library.form.ok" "OK"}}" name="{{.InputName}}" aria-hidden="true">{{if $value}}{{$value.Value}}{{end}}</textarea>
+      <textarea class="qor-file__options hidden" data-cropper-title="{{t "qor_media_library.form.crop_image" "Crop image"}}" data-cropper-cancel="{{t "qor_media_library.form.cancel" "Cancel"}}" data-cropper-ok="{{t "qor_media_library.form.ok" "OK"}}" name="{{.InputName}}" aria-hidden="true">{{if $value}}{{$value.Export}}{{end}}</textarea>
 
       <!-- If is image or videos, show description input -->
       <div class="qor-field qor-medialibrary__image-desc">
@@ -67,7 +67,7 @@
             {{range $key, $v := $value.GetSizes}}
               {{if not (is_included $key "@")}}
                 <li>
-                  <img src="{{$value.URL $key}}" data-original-url="{{$value.URL "original"}}" data-size-name="{{$key}}" data-size-resolution="{{marshal $v}}">
+                  <img src="{{$value.FullURLU $key}}" data-original-url="{{$value.FullURLU "original"}}" data-size-name="{{$key}}" data-size-resolution="{{marshal $v}}">
                   <span>{{$key}} ({{$v.Width}}&times;{{$v.Height}} px)</span>
                 </li>
               {{end}}
@@ -75,14 +75,14 @@
           </ul>
         {{else if $value.IsImage}}
           <ul>
-            <li><img src="{{$value.URL}}" data-original-url="{{$value.URL "original"}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
+            <li><img src="{{$value.FullURL}}" data-original-url="{{$value.FullURLU "original"}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
           </ul>
         {{else if $value.URL}}
           <ul>
             <li class="qor-file__list-item">
               <span>
                 {{if (eq $value.Ext ".svg")}}
-                  <img src="{{$value.URL}}" class="is-svg" alt="{{$value.GetFileName}}">
+                  <img src="{{$value.FullURL}}" class="is-svg" alt="{{$value.GetFileName}}">
                 {{else}}
                   <span>{{$value.GetFileName}}</span>
                 {{end}}
@@ -90,7 +90,7 @@
               <div class="qor-cropper__toggle">
                 <div class="qor-cropper__toggle--delete"><i class="material-icons">delete</i></div>
                 <div class="qor-cropper__toggle--download">
-                  <a href="{{$value.URL}}" class="qor-file__action-download" download="{{$value.GetFileName}}" title="{{t "qor_media_library.form.download" "Download"}}"><i class="material-icons">file_download</i></a>
+                  <a href="{{$value.FullURL}}" class="qor-file__action-download" download="{{$value.GetFileName}}" title="{{t "qor_media_library.form.download" "Download"}}"><i class="material-icons">file_download</i></a>
                 </div>
               </div>
             </li>
