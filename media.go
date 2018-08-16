@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	"github.com/qor/qor"
-	"github.com/qor/oss"
+	"github.com/aghape/aghape"
+	"github.com/aghape/oss"
 )
 
 type Old struct {

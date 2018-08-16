@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/qor/media"
+	"github.com/aghape/media"
 )
 
 // FileSystem defined a media library storage using file system

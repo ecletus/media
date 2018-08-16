@@ -11,20 +11,14 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	"github.com/qor/admin"
-	"github.com/qor/media"
-	"github.com/qor/media/oss"
-	"github.com/qor/qor"
-	"github.com/qor/qor/db"
-	"github.com/qor/qor/resource"
-	"github.com/qor/qor/utils"
+	"github.com/aghape/admin"
+	"github.com/aghape/media"
+	"github.com/aghape/media/oss"
+	"github.com/aghape/aghape"
+	"github.com/aghape/aghape/db"
+	"github.com/aghape/aghape/resource"
+	"github.com/aghape/aghape/utils"
 )
-
-func init() {
-	qor.IfDev(func() {
-		admin.RegisterViewPath("github.com/qor/media/media_library/views")
-	})
-}
 
 type MediaLibraryInterface interface {
 	ScanMediaOptions(MediaOption) error
@@ -34,7 +28,7 @@ type MediaLibraryInterface interface {
 	Init(site qor.SiteInterface)
 }
 
-type MediaLibrary struct {
+type QorMediaLibrary struct {
 	gorm.Model
 	SelectedType string
 	File         MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
@@ -53,11 +47,11 @@ type MediaOption struct {
 }
 
 
-func (mediaLibrary *MediaLibrary) Init(site qor.SiteInterface) {
+func (mediaLibrary *QorMediaLibrary) Init(site qor.SiteInterface) {
 	mediaLibrary.File.Init(site, db.FieldCache.Get(mediaLibrary, "File"))
 }
 
-func (mediaLibrary *MediaLibrary) ScanMediaOptions(mediaOption MediaOption) error {
+func (mediaLibrary *QorMediaLibrary) ScanMediaOptions(mediaOption MediaOption) error {
 	if bytes, err := json.Marshal(mediaOption); err == nil {
 		return mediaLibrary.File.Scan(bytes)
 	} else {
@@ -65,7 +59,7 @@ func (mediaLibrary *MediaLibrary) ScanMediaOptions(mediaOption MediaOption) erro
 	}
 }
 
-func (mediaLibrary *MediaLibrary) GetMediaOption() MediaOption {
+func (mediaLibrary *QorMediaLibrary) GetMediaOption() MediaOption {
 	return MediaOption{
 		Video:        mediaLibrary.File.Video,
 		FileName:     mediaLibrary.File.FileName,
@@ -78,15 +72,15 @@ func (mediaLibrary *MediaLibrary) GetMediaOption() MediaOption {
 	}
 }
 
-func (mediaLibrary *MediaLibrary) SetSelectedType(typ string) {
+func (mediaLibrary *QorMediaLibrary) SetSelectedType(typ string) {
 	mediaLibrary.SelectedType = typ
 }
 
-func (mediaLibrary *MediaLibrary) GetSelectedType() string {
+func (mediaLibrary *QorMediaLibrary) GetSelectedType() string {
 	return mediaLibrary.SelectedType
 }
 
-func (MediaLibrary) ConfigureQorResource(res resource.Resourcer) {
+func (QorMediaLibrary) ConfigureQorResource(res resource.Resourcer) {
 	if res, ok := res.(*admin.Resource); ok {
 		res.UseTheme("grid")
 		res.UseTheme("media_library")
@@ -272,13 +266,13 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 		}
 
 		if config, ok := meta.Config.(*MediaBoxConfig); ok {
-			Admin := meta.GetBaseResource().(*admin.Resource).GetAdmin()
+			res := meta.GetBaseResource().(*admin.Resource)
 			if config.RemoteDataResource == nil {
-				mediaLibraryResource := Admin.GetResource("MediaLibrary")
-				if mediaLibraryResource == nil {
-					mediaLibraryResource = Admin.NewResource(&MediaLibrary{})
+				dataResource := res.GetOrParentResourceByID("QorMediaLibrary")
+				if dataResource == nil {
+					panic("Imposible to auto detect RemoteDataResource \"QorMediaLibrary\".")
 				}
-				config.RemoteDataResource = admin.NewDataResource(mediaLibraryResource)
+				config.RemoteDataResource = &admin.DataResource{Resource:dataResource}
 			}
 
 			if _, ok := config.RemoteDataResource.Resource.Value.(MediaLibraryInterface); !ok {
@@ -289,7 +283,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 			config.RemoteDataResource.Resource.Meta(&admin.Meta{
 				Name: "MediaOption",
 				Type: "hidden",
-				Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) {
+				Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) error {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 						mediaLibrary.Init(context.Site)
 						var mediaOption MediaOption
@@ -300,6 +294,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 							mediaLibrary.ScanMediaOptions(mediaOption)
 						}
 					}
+					return nil
 				},
 				Valuer: func(record interface{}, context *qor.Context) interface{} {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
@@ -406,11 +401,11 @@ func (mediaBox MediaBox) Crop(context *qor.Context, res *admin.Resource, db *gor
 	for _, file := range mediaBox.Files {
 		context := &qor.Context{ResourceID: string(file.ID), DB: db}
 		record := res.NewStruct(context.Site)
-		if err = res.CallFindOne(record, nil, context); err == nil {
+		if err = res.FindOne(record, nil, context); err == nil {
 			if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 				mediaOption.Crop = true
 				if err = mediaLibrary.ScanMediaOptions(mediaOption); err == nil {
-					err = res.CallSave(record, context)
+					err = res.Save(record, context)
 				}
 			} else {
 				err = errors.New("invalid media library resource")

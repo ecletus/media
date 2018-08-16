@@ -21,11 +21,11 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/inflection"
-	"github.com/qor/admin"
-	"github.com/qor/qor"
-	"github.com/qor/qor/resource"
-	"github.com/qor/qor/utils"
-	"github.com/qor/oss"
+	"github.com/aghape/admin"
+	"github.com/aghape/aghape"
+	"github.com/aghape/aghape/resource"
+	"github.com/aghape/aghape/utils"
+	"github.com/aghape/oss"
 )
 
 // CropOption includes crop options
@@ -313,12 +313,6 @@ func (b Base) IsVideo() bool {
 
 func (b Base) IsSVG() bool {
 	return IsSVGFormat(b.URL())
-}
-
-func init() {
-	qor.IfDev(func() {
-		admin.RegisterViewPath("github.com/qor/media/views")
-	})
 }
 
 // ConfigureQorMetaBeforeInitialize configure this field for Qor Admin

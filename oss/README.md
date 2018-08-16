@@ -1,14 +1,14 @@
 # Media Library OSS
 
-Use [OSS](https://github.com/qor/oss) as backend to store medias
+Use [OSS](https://github.com/aghape/oss) as backend to store medias
 
 # Usage
 
 ```go
 import (
-	"github.com/qor/media/oss"
-	"github.com/qor/oss/filesystem"
-	"github.com/qor/oss/s3"
+	"github.com/aghape/media/oss"
+	"github.com/aghape/oss/filesystem"
+	"github.com/aghape/oss/s3"
 	awss3 "github.com/aws/aws-sdk-go/service/s3"
 )
 

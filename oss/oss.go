@@ -4,33 +4,29 @@ import (
 	"io"
 	"os"
 	"fmt"
-	"path/filepath"
-
-	"github.com/qor/media"
-	"github.com/qor/qor"
-	"github.com/qor/oss/filesystem"
-	"github.com/qor/oss"
-	manager "github.com/qor/oss/manager"
+	"github.com/aghape/media"
+	"github.com/aghape/oss/filesystem"
+	"github.com/aghape/oss"
+	manager "github.com/aghape/oss/manager"
 )
 
 var (
 	// Storage the storage used to save medias
-	FileSystemStorage = filesystem.New(filepath.Join(qor.CONFIG().Root(), "public"))
+	FileSystemStorage = filesystem.New("./data")
 	// URLTemplate default URL template
 	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
 )
 
-func init()  {
+func init() {
 	manager.Storages.Default = FileSystemStorage
 	manager.Storages.DefaultFS = FileSystemStorage
 }
 
 const OPTION_KEY = "storage"
 
-func DefaultFilesystemStorage() *filesystem.FileSystem  {
+func DefaultFilesystemStorage() *filesystem.FileSystem {
 	return FileSystemStorage
 }
-
 
 // OSS common storage interface
 type OSS struct {

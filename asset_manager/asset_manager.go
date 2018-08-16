@@ -3,14 +3,13 @@ package asset_manager
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"regexp"
 
 	"github.com/jinzhu/gorm"
-	"github.com/qor/admin"
-	"github.com/qor/media/oss"
-	"github.com/qor/qor/resource"
+	"github.com/aghape/admin"
+	"github.com/aghape/media/oss"
+	"github.com/aghape/aghape/resource"
 )
 
 // AssetManager defined a asset manager that could be used to manage assets in qor admin
@@ -22,8 +21,8 @@ type AssetManager struct {
 // ConfigureQorResource configure qor locale for Qor Admin
 func (*AssetManager) ConfigureQorResource(res resource.Resourcer) {
 	if res, ok := res.(*admin.Resource); ok {
-		router := res.GetAdmin().GetRouter()
-		router.Post(fmt.Sprintf("/%v/upload", res.ToParam()), func(context *admin.Context) {
+		router := res.Router
+		router.Post("/upload", func(context *admin.Context) {
 			result := AssetManager{}
 			result.File.Scan(context.Request.MultipartForm.File["file"])
 			context.GetDB().Save(&result)
@@ -32,7 +31,7 @@ func (*AssetManager) ConfigureQorResource(res resource.Resourcer) {
 		})
 
 		assetURL := regexp.MustCompile(`^/system/assets/(\d+)/`)
-		router.Post(fmt.Sprintf("/%v/crop", res.ToParam()), func(context *admin.Context) {
+		router.Post("/crop", func(context *admin.Context) {
 			defer context.Request.Body.Close()
 			var (
 				err error

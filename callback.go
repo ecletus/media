@@ -6,11 +6,29 @@ import (
 	"mime/multipart"
 	"reflect"
 
-	"github.com/qor/qor"
 	"github.com/jinzhu/gorm"
-	"github.com/qor/serializable_meta"
+	"github.com/aghape/aghape"
+	"github.com/aghape/serializable_meta"
 )
 
+var E_SAVE_AND_CROP = PKG + ":save_and_crop"
+var DB_CALLBACK_IGNORE = PKG + ".callback.ignore"
+
+func IgnoreCallback(db *gorm.DB) *gorm.DB {
+	return db.Set(DB_CALLBACK_IGNORE, true)
+}
+
+func IsIgnoreCallback(v interface{}) bool {
+	switch t := v.(type) {
+	case *gorm.DB:
+		v, ok := t.Get(DB_CALLBACK_IGNORE)
+		return v != nil && ok
+	case *gorm.Scope:
+		v, ok := t.Get(DB_CALLBACK_IGNORE)
+		return v != nil && ok
+	}
+	return false
+}
 func fieldOption(field *gorm.Field) *Option {
 	return parseTagOption(field.Tag.Get("media_library"))
 }
@@ -19,7 +37,7 @@ func cropField(field *gorm.Field, scope *gorm.Scope) (cropped bool) {
 	if field.Field.CanAddr() {
 		// TODO Handle scanner
 		if media, ok := field.Field.Addr().Interface().(Media); ok && !media.Cropped() {
-			media.Init(qor.ContextFromDB(scope.DB()).Site, field)
+			media.Init(qor.GetSiteFromDB(scope.DB()), field)
 			option := media.FieldOption()
 
 			if media.GetFileHeader() != nil || media.NeedCrop() {
@@ -71,6 +89,9 @@ func cropField(field *gorm.Field, scope *gorm.Scope) (cropped bool) {
 
 func saveAndCropImage(isCreate bool) func(scope *gorm.Scope) {
 	return func(scope *gorm.Scope) {
+		if IsIgnoreCallback(scope) {
+			return
+		}
 		if !scope.HasError() {
 			var updateColumns = map[string]interface{}{}
 
@@ -124,6 +145,6 @@ func saveAndCropImage(isCreate bool) func(scope *gorm.Scope) {
 
 // RegisterCallbacks register callback into GORM DB
 func RegisterCallbacks(db *gorm.DB) {
-	db.Callback().Update().Before("gorm:before_update").Register("media:save_and_crop", saveAndCropImage(false))
-	db.Callback().Create().After("gorm:after_create").Register("media:save_and_crop", saveAndCropImage(true))
+	db.Callback().Update().Before("gorm:before_update").Register(E_SAVE_AND_CROP, saveAndCropImage(false))
+	db.Callback().Create().After("gorm:after_create").Register(E_SAVE_AND_CROP, saveAndCropImage(true))
 }
