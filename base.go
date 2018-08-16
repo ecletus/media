@@ -19,7 +19,7 @@ import (
 	"strconv"
 
 	"github.com/gosimple/slug"
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/jinzhu/inflection"
 	"github.com/aghape/admin"
 	"github.com/aghape/aghape"
@@ -59,7 +59,7 @@ type Base struct {
 	cropped     bool
 	site        qor.SiteInterface
 	storage     oss.StorageInterface
-	field       *gorm.Field
+	field       *aorm.Field
 	fieldOption *Option
 	old         *Old                   `json:"-"`
 }
@@ -183,11 +183,11 @@ func (b Base) URL(styles ...string) string {
 }
 
 // gorm/scope.scan()
-func (b *Base) AfterScan(db *gorm.DB, field *gorm.Field) {
+func (b *Base) AfterScan(db *aorm.DB, field *aorm.Field) {
 	b.Init(qor.GetSiteFromDB(db), field)
 }
 
-func (b *Base) Init(site qor.SiteInterface, field *gorm.Field) {
+func (b *Base) Init(site qor.SiteInterface, field *aorm.Field) {
 	if b.site == nil {
 		b.site = site
 	}
@@ -237,7 +237,7 @@ func (b Base) FullURLU(styles ...string) (url string) {
 
 var urlReplacer = regexp.MustCompile("(\\s|\\+)+")
 
-func getFuncMap(scope *gorm.Scope, field *gorm.Field, filename string) template.FuncMap {
+func getFuncMap(scope *aorm.Scope, field *aorm.Field, filename string) template.FuncMap {
 	hash := func() string { return strings.Replace(time.Now().Format("20060102150506.000000000"), ".", "", -1) }
 	return template.FuncMap{
 		"class":       func() string { return inflection.Plural(utils.ToParamString(scope.GetModelStruct().ModelType.Name())) },
@@ -254,7 +254,7 @@ func getFuncMap(scope *gorm.Scope, field *gorm.Field, filename string) template.
 }
 
 // GetURL get default URL for a model based on its options
-func (b Base) GetURL(scope *gorm.Scope, field *gorm.Field, templater URLTemplater) string {
+func (b Base) GetURL(scope *aorm.Scope, field *aorm.Field, templater URLTemplater) string {
 	if path := templater.GetURLTemplate(b.fieldOption); path != "" {
 		tmpl := template.New("").Funcs(getFuncMap(scope, field, b.GetFileName()))
 		if tmpl, err := tmpl.Parse(path); err == nil {

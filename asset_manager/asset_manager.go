@@ -6,7 +6,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/admin"
 	"github.com/aghape/media/oss"
 	"github.com/aghape/aghape/resource"
@@ -14,7 +14,7 @@ import (
 
 // AssetManager defined a asset manager that could be used to manage assets in qor admin
 type AssetManager struct {
-	gorm.Model
+	aorm.Model
 	File oss.OSS `media_library:"URL:/system/assets/{{primary_key}}/{{filename_with_hash}}"`
 }
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/media"
 	"github.com/aghape/media/oss"
 	"github.com/aghape/aghape/test/utils"
@@ -31,7 +31,7 @@ func (MyFileSystem) GetSizes() map[string]*media.Size {
 }
 
 type User struct {
-	gorm.Model
+	aorm.Model
 	Name   string
 	Avatar MyFileSystem
 }

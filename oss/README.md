@@ -13,7 +13,7 @@ import (
 )
 
 type Product struct {
-	gorm.Model
+	aorm.Model
 	Image oss.OSS
 }
 

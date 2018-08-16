@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/media"
 	"github.com/aghape/media/filesystem"
 	"github.com/aghape/aghape/test/utils"
@@ -31,7 +31,7 @@ func (MyFileSystem) GetSizes() map[string]*media.Size {
 }
 
 type User struct {
-	gorm.Model
+	aorm.Model
 	Name    string
 	Avatar  MyFileSystem
 	Avatar2 filesystem.FileSystem `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`

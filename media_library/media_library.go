@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/admin"
 	"github.com/aghape/media"
 	"github.com/aghape/media/oss"
@@ -29,7 +29,7 @@ type MediaLibraryInterface interface {
 }
 
 type QorMediaLibrary struct {
-	gorm.Model
+	aorm.Model
 	SelectedType string
 	File         MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
 }
@@ -105,7 +105,7 @@ func (mediaLibraryStorage *MediaLibraryStorage) RemoveOld() (found bool, err err
 	return mediaLibraryStorage.OSS.RemoveOld()
 }
 // gorm/scope.scan()
-func (mediaLibraryStorage *MediaLibraryStorage) AfterScan(db *gorm.DB, field *gorm.Field) {
+func (mediaLibraryStorage *MediaLibraryStorage) AfterScan(db *aorm.DB, field *aorm.Field) {
 	mediaLibraryStorage.OSS.AfterScan(db, field)
 }
 
@@ -397,7 +397,7 @@ func (file File) URL(styles ...string) string {
 	return file.Url
 }
 
-func (mediaBox MediaBox) Crop(context *qor.Context, res *admin.Resource, db *gorm.DB, mediaOption MediaOption) (err error) {
+func (mediaBox MediaBox) Crop(context *qor.Context, res *admin.Resource, db *aorm.DB, mediaOption MediaOption) (err error) {
 	for _, file := range mediaBox.Files {
 		context := &qor.Context{ResourceID: string(file.ID), DB: db}
 		record := res.NewStruct(context.Site)

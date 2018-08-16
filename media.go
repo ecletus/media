@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/aghape"
 	"github.com/aghape/oss"
 )
@@ -36,13 +36,13 @@ type Media interface {
 	SetSite(site qor.SiteInterface)
 	Storage() oss.StorageInterface
 	SetStorage(storage oss.StorageInterface)
-	Init(site qor.SiteInterface, field *gorm.Field)
+	Init(site qor.SiteInterface, field *aorm.Field)
 	FieldOption() *Option
 	SetFieldOption(option *Option)
 
 	Scan(value interface{}) error
 	Value() (driver.Value, error)
-	GetURL(scope *gorm.Scope, field *gorm.Field, templater URLTemplater) string
+	GetURL(scope *aorm.Scope, field *aorm.Field, templater URLTemplater) string
 
 	GetFileHeader() FileHeader
 	GetFileName() string
