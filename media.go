@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/moisespsena-go/aorm"
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/aghape/oss"
 )
 
@@ -32,11 +32,11 @@ func (old *Old) Names() (names []string) {
 
 // Media is an interface including methods that needs for a media library storage
 type Media interface {
-	Site() qor.SiteInterface
-	SetSite(site qor.SiteInterface)
+	Site() core.SiteInterface
+	SetSite(site core.SiteInterface)
 	Storage() oss.StorageInterface
 	SetStorage(storage oss.StorageInterface)
-	Init(site qor.SiteInterface, field *aorm.Field)
+	Init(site core.SiteInterface, field *aorm.Field)
 	FieldOption() *Option
 	SetFieldOption(option *Option)
 

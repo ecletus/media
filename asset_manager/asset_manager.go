@@ -9,7 +9,7 @@ import (
 	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/admin"
 	"github.com/aghape/media/oss"
-	"github.com/aghape/aghape/resource"
+	"github.com/aghape/core/resource"
 )
 
 // AssetManager defined a asset manager that could be used to manage assets in qor admin

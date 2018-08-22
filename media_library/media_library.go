@@ -14,10 +14,10 @@ import (
 	"github.com/aghape/admin"
 	"github.com/aghape/media"
 	"github.com/aghape/media/oss"
-	"github.com/aghape/aghape"
-	"github.com/aghape/aghape/db"
-	"github.com/aghape/aghape/resource"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core"
+	"github.com/aghape/core/db"
+	"github.com/aghape/core/resource"
+	"github.com/aghape/core/utils"
 )
 
 type MediaLibraryInterface interface {
@@ -25,7 +25,7 @@ type MediaLibraryInterface interface {
 	SetSelectedType(string)
 	GetSelectedType() string
 	GetMediaOption() MediaOption
-	Init(site qor.SiteInterface)
+	Init(site core.SiteInterface)
 }
 
 type QorMediaLibrary struct {
@@ -47,7 +47,7 @@ type MediaOption struct {
 }
 
 
-func (mediaLibrary *QorMediaLibrary) Init(site qor.SiteInterface) {
+func (mediaLibrary *QorMediaLibrary) Init(site core.SiteInterface) {
 	mediaLibrary.File.Init(site, db.FieldCache.Get(mediaLibrary, "File"))
 }
 
@@ -212,7 +212,7 @@ func (mediaLibraryStorage MediaLibraryStorage) ConfigureQorMeta(metaor resource.
 		if meta.Type == "" {
 			meta.Type = "media_library"
 		}
-		meta.SetFormattedValuer(func(record interface{}, context *qor.Context) interface{} {
+		meta.SetFormattedValuer(func(record interface{}, context *core.Context) interface{} {
 			return meta.GetValuer()(record, context)
 		})
 	}
@@ -262,7 +262,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 		}
 
 		if meta.FormattedValuer == nil {
-			meta.FormattedValuer = func(record interface{}, context *qor.Context) interface{} {
+			meta.FormattedValuer = func(record interface{}, context *core.Context) interface{} {
 				if mediaBox, ok := meta.GetValuer()(record, context).(*MediaBox); ok {
 					return mediaBox.URL()
 				}
@@ -289,7 +289,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 			config.RemoteDataResource.Resource.Meta(&admin.Meta{
 				Name: "MediaOption",
 				Type: "hidden",
-				Setter: func(record interface{}, metaValue *resource.MetaValue, context *qor.Context) error {
+				Setter: func(record interface{}, metaValue *resource.MetaValue, context *core.Context) error {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 						mediaLibrary.Init(context.Site)
 						var mediaOption MediaOption
@@ -302,7 +302,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 					}
 					return nil
 				},
-				Valuer: func(record interface{}, context *qor.Context) interface{} {
+				Valuer: func(record interface{}, context *core.Context) interface{} {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 						if value, err := json.Marshal(mediaLibrary.GetMediaOption()); err == nil {
 							return string(value)
@@ -315,7 +315,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 			config.RemoteDataResource.Resource.Meta(&admin.Meta{
 				Name: "SelectedType",
 				Type: "hidden",
-				Valuer: func(record interface{}, context *qor.Context) interface{} {
+				Valuer: func(record interface{}, context *core.Context) interface{} {
 					if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 						return mediaLibrary.GetSelectedType()
 					}
@@ -323,7 +323,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				},
 			})
 
-			config.RemoteDataResource.Resource.AddProcessor(func(record interface{}, metaValues *resource.MetaValues, context *qor.Context) error {
+			config.RemoteDataResource.Resource.AddProcessor(func(record interface{}, metaValues *resource.MetaValues, context *core.Context) error {
 				if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 					mediaLibrary.Init(context.Site)
 					var filename string
@@ -403,9 +403,9 @@ func (file File) URL(styles ...string) string {
 	return file.Url
 }
 
-func (mediaBox MediaBox) Crop(context *qor.Context, res *admin.Resource, db *aorm.DB, mediaOption MediaOption) (err error) {
+func (mediaBox MediaBox) Crop(context *core.Context, res *admin.Resource, db *aorm.DB, mediaOption MediaOption) (err error) {
 	for _, file := range mediaBox.Files {
-		context := &qor.Context{ResourceID: string(file.ID), DB: db}
+		context := &core.Context{ResourceID: string(file.ID), DB: db}
 		record := res.NewStruct(context.Site)
 		if err = res.FindOne(record, nil, context); err == nil {
 			if mediaLibrary, ok := record.(MediaLibraryInterface); ok {

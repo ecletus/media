@@ -12,7 +12,7 @@ import (
 	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/media"
 	"github.com/aghape/media/oss"
-	"github.com/aghape/aghape/test/utils"
+	"github.com/aghape/core/test/utils"
 )
 
 var db = utils.TestDB()

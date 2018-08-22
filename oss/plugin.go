@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/aghape/plug"
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 )
 
 type Plugin struct {
@@ -17,7 +17,7 @@ func (p *Plugin) RequireOptions() []string {
 
 func (p *Plugin) Init(options *plug.Options) error {
 	if FileSystemStorage.Base == "./data" {
-		config := options.GetInterface(p.SetupConfigKey).(*qor.SetupConfig)
+		config := options.GetInterface(p.SetupConfigKey).(*core.SetupConfig)
 		FileSystemStorage.Base = filepath.Join(config.Root(), "data")
 	}
 	return nil

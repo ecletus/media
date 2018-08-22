@@ -22,9 +22,9 @@ import (
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/aghape/admin"
-	"github.com/aghape/aghape"
-	"github.com/aghape/aghape/resource"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core"
+	"github.com/aghape/core/resource"
+	"github.com/aghape/core/utils"
 	"github.com/aghape/oss"
 	"github.com/dustin/go-humanize"
 	"github.com/gosimple/slug"
@@ -61,7 +61,7 @@ type Base struct {
 	FileHeader  FileHeader             `json:"-"`
 	Reader      io.Reader              `json:"-"`
 	cropped     bool
-	site        qor.SiteInterface
+	site        core.SiteInterface
 	storage     oss.StorageInterface
 	field       *aorm.Field
 	fieldOption *Option
@@ -76,11 +76,11 @@ func (b *Base) Names() (names []string) {
 	return names
 }
 
-func (b *Base) Site() qor.SiteInterface {
+func (b *Base) Site() core.SiteInterface {
 	return b.site
 }
 
-func (b *Base) SetSite(site qor.SiteInterface) {
+func (b *Base) SetSite(site core.SiteInterface) {
 	b.site = site
 }
 
@@ -284,10 +284,10 @@ func (b Base) URL(styles ...string) string {
 
 // gorm/scope.scan()
 func (b *Base) AfterScan(db *aorm.DB, field *aorm.Field) {
-	b.Init(qor.GetSiteFromDB(db), field)
+	b.Init(core.GetSiteFromDB(db), field)
 }
 
-func (b *Base) Init(site qor.SiteInterface, field *aorm.Field) {
+func (b *Base) Init(site core.SiteInterface, field *aorm.Field) {
 	if b.site == nil {
 		b.site = site
 	}
@@ -423,7 +423,7 @@ func (Base) ConfigureQorMetaBeforeInitialize(meta resource.Metaor) {
 		}
 
 		if meta.GetFormattedValuer() == nil {
-			meta.SetFormattedValuer(func(value interface{}, context *qor.Context) interface{} {
+			meta.SetFormattedValuer(func(value interface{}, context *core.Context) interface{} {
 				return utils.Stringify(meta.GetValuer()(value, context))
 			})
 		}

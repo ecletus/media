@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/moisespsena-go/aorm"
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/aghape/serializable_meta"
 )
 
@@ -37,7 +37,7 @@ func cropField(field *aorm.Field, scope *aorm.Scope) (cropped bool) {
 	if field.Field.CanAddr() {
 		// TODO Handle scanner
 		if media, ok := field.Field.Addr().Interface().(Media); ok && !media.Cropped() {
-			media.Init(qor.GetSiteFromDB(scope.DB()), field)
+			media.Init(core.GetSiteFromDB(scope.DB()), field)
 			option := media.FieldOption()
 
 			if media.GetFileHeader() != nil || media.NeedCrop() {

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core/utils"
 )
 
 func getImageFormat(url string) (*imaging.Format, error) {
