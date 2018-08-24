@@ -10,14 +10,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/admin"
-	"github.com/aghape/media"
-	"github.com/aghape/media/oss"
 	"github.com/aghape/core"
 	"github.com/aghape/core/db"
 	"github.com/aghape/core/resource"
 	"github.com/aghape/core/utils"
+	"github.com/aghape/media"
+	"github.com/aghape/media/oss"
+	"github.com/moisespsena-go/aorm"
 )
 
 type MediaLibraryInterface interface {
@@ -45,7 +45,6 @@ type MediaOption struct {
 	Description  string                       `json:",omitempty"`
 	Crop         bool
 }
-
 
 func (mediaLibrary *QorMediaLibrary) Init(site core.SiteInterface) {
 	mediaLibrary.File.Init(site, db.FieldCache.Get(mediaLibrary, "File"))
@@ -98,12 +97,13 @@ type MediaLibraryStorage struct {
 
 func (mediaLibraryStorage *MediaLibraryStorage) RemoveOld() (found bool, err error) {
 	if mediaLibraryStorage.Old != nil {
-		for name, _:= range mediaLibraryStorage.GetSizes() {
+		for name, _ := range mediaLibraryStorage.GetSizes() {
 			mediaLibraryStorage.Old().AddName(name)
 		}
 	}
 	return mediaLibraryStorage.OSS.RemoveOld()
 }
+
 // gorm/scope.scan()
 func (mediaLibraryStorage *MediaLibraryStorage) AfterScan(db *aorm.DB, field *aorm.Field) {
 	mediaLibraryStorage.OSS.AfterScan(db, field)
@@ -278,7 +278,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				if dataResource == nil {
 					panic("Imposible to auto detect RemoteDataResource \"QorMediaLibrary\".")
 				}
-				config.RemoteDataResource = &admin.DataResource{Resource:dataResource}
+				config.RemoteDataResource = &admin.DataResource{Resource: dataResource}
 			}
 
 			if _, ok := config.RemoteDataResource.Resource.Value.(MediaLibraryInterface); !ok {
@@ -407,11 +407,12 @@ func (mediaBox MediaBox) Crop(context *core.Context, res *admin.Resource, db *ao
 	for _, file := range mediaBox.Files {
 		context := &core.Context{ResourceID: string(file.ID), DB: db}
 		record := res.NewStruct(context.Site)
-		if err = res.FindOne(record, nil, context); err == nil {
+		crud := res.Crud(context)
+		if err = crud.FindOne(record); err == nil {
 			if mediaLibrary, ok := record.(MediaLibraryInterface); ok {
 				mediaOption.Crop = true
 				if err = mediaLibrary.ScanMediaOptions(mediaOption); err == nil {
-					err = res.Save(record, context)
+					err = crud.Update(record)
 				}
 			} else {
 				err = errors.New("invalid media library resource")
