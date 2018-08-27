@@ -209,6 +209,10 @@ func (b *Base) FieldScan(field *reflect.StructField, data interface{}) (err erro
 
 // Scan scan files, crop options, db values into struct
 func (b *Base) Scan(data interface{}) (err error) {
+	if data == nil {
+		b.SetFile("", 0, &fileWrapper{})
+		return nil
+	}
 	switch values := data.(type) {
 	case *os.File:
 		stat, err := values.Stat()
