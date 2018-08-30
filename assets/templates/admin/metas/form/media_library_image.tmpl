@@ -19,7 +19,7 @@
         {{range $key, $v := $value.GetSizes}}
           {{if not (is_included $key "@")}}
             <li>
-              <img src="{{$value.URL $key}}" data-original-url="{{$value.URL "original"}}" data-size-name="{{$key}}" data-size-resolution="{{marshal $v}}">
+              <img src="{{$value.FullURLU $key}}" data-original-url="{{$value.FullURLU "original"}}" data-size-name="{{$key}}" data-size-resolution="{{marshal $v}}">
               <span>{{$key}} ({{$v.Width}}&times;{{$v.Height}} px)</span>
             </li>
           {{end}}
@@ -27,7 +27,7 @@
       </ul>
     {{else}}
       <ul>
-        <li><img src="{{$value.URL}}" data-original-url="{{$value.URL "original"}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
+        <li><img src="{{$value.FullURLU}}" data-original-url="{{$value.FullURLU "original"}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
       </ul>
     {{end}}
   </div>

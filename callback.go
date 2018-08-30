@@ -6,9 +6,9 @@ import (
 	"mime/multipart"
 	"reflect"
 
-	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/core"
 	"github.com/aghape/serializable_meta"
+	"github.com/moisespsena-go/aorm"
 )
 
 var E_SAVE_AND_CROP = PKG + ":save_and_crop"
@@ -56,8 +56,11 @@ func cropField(field *aorm.Field, scope *aorm.Scope) (cropped bool) {
 
 				media.Cropped(true)
 
-				if url := media.GetURL(scope, field, media); url == "" {
+				var url string
+
+				if url = media.GetURL(scope, field, media); url == "" {
 					scope.Err(errors.New("invalid URL"))
+					return false
 				} else {
 					result, _ := json.Marshal(map[string]string{"Url": url})
 					media.Scan(string(result))
@@ -77,7 +80,7 @@ func cropField(field *aorm.Field, scope *aorm.Scope) (cropped bool) {
 
 					// Save File
 					if !handled {
-						scope.Err(media.Store(media.URL(), file))
+						scope.Err(media.Store(url, file))
 					}
 				}
 				return true

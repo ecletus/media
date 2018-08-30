@@ -20,6 +20,11 @@ import (
 	"github.com/moisespsena-go/aorm"
 )
 
+func init() {
+	aorm.StructFieldMethodCallbacks.RegisterFieldType(&MediaLibraryStorage{})
+	aorm.StructFieldMethodCallbacks.RegisterFieldType(&File{})
+}
+
 type MediaLibraryInterface interface {
 	ScanMediaOptions(MediaOption) error
 	SetSelectedType(string)

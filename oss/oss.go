@@ -1,13 +1,15 @@
 package oss
 
 import (
+	"fmt"
 	"io"
 	"os"
-	"fmt"
+
 	"github.com/aghape/media"
-	"github.com/aghape/oss/filesystem"
 	"github.com/aghape/oss"
+	"github.com/aghape/oss/filesystem"
 	manager "github.com/aghape/oss/manager"
+	"github.com/moisespsena-go/aorm"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 func init() {
 	manager.Storages.Default = FileSystemStorage
 	manager.Storages.DefaultFS = FileSystemStorage
+	aorm.StructFieldMethodCallbacks.RegisterFieldType(&OSS{})
 }
 
 const OPTION_KEY = "storage"
