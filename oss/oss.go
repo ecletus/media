@@ -10,6 +10,7 @@ import (
 	"github.com/aghape/oss/filesystem"
 	manager "github.com/aghape/oss/manager"
 	"github.com/moisespsena-go/aorm"
+	"github.com/moisespsena/go-path-helpers"
 )
 
 var (
@@ -17,18 +18,13 @@ var (
 	FileSystemStorage = filesystem.New("./data")
 	// URLTemplate default URL template
 	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
+	PKG         = path_helpers.GetCalledDir()
 )
 
 func init() {
 	manager.Storages.Default = FileSystemStorage
 	manager.Storages.DefaultFS = FileSystemStorage
 	aorm.StructFieldMethodCallbacks.RegisterFieldType(&OSS{})
-}
-
-const OPTION_KEY = "storage"
-
-func DefaultFilesystemStorage() *filesystem.FileSystem {
-	return FileSystemStorage
 }
 
 // OSS common storage interface

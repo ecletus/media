@@ -18,9 +18,6 @@ import (
 	"text/template"
 	"time"
 
-	"reflect"
-
-	"code.cloudfoundry.org/bytefmt"
 	"github.com/aghape/admin"
 	"github.com/aghape/core"
 	"github.com/aghape/core/resource"
@@ -31,6 +28,37 @@ import (
 	"github.com/jinzhu/inflection"
 	"github.com/moisespsena-go/aorm"
 )
+
+type FullURL interface {
+	FullURL() string
+}
+type FullURLStyle interface {
+	FullURL(styles ...string) string
+}
+
+type FullURLContext interface {
+	FullURL(ctx *core.Context) string
+}
+
+type FullURLContextStyle interface {
+	FullURL(ctx *core.Context, styles ...string) string
+}
+
+type URL interface {
+	URL() string
+}
+
+type URLStyle interface {
+	URL(styles ...string) string
+}
+
+type URLContext interface {
+	URL(ctx *core.Context) string
+}
+
+type URLContextStyle interface {
+	URL(ctx *core.Context, styles ...string) string
+}
 
 // CropOption includes crop options
 type CropOption struct {
@@ -111,8 +139,7 @@ func (b *Base) SetFile(fileName string, fileSize int64, fileHeader FileHeader) {
 	b.CropOptions = make(map[string]*CropOption)
 }
 
-func (b *Base) CallFieldScan(field *reflect.StructField, data interface{}, scan func(data interface{}) error) (err error) {
-	tags := utils.ParseTagOption(field.Tag.Get("oss"))
+func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(data interface{}) error) (err error) {
 	var (
 		types    []string
 		fileName string
@@ -121,33 +148,33 @@ func (b *Base) CallFieldScan(field *reflect.StructField, data interface{}, scan 
 		check    []func()
 	)
 
-	if tag, ok := tags["TYPES"]; ok {
-		for _, typ := range strings.Split(tag, ",") {
-			typ = strings.TrimSpace(typ)
-			if typ != "" {
-				types = append(types, strings.ToLower(typ))
-			}
-
-			check = append(check, func() {
-				ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileName), "."))
-
-				for _, typ := range types {
-					if typ == ext {
-						return
-					}
+	if t, ok := data.(AcceptTypes); ok {
+		ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileName), "."))
+		check = append(check, func() {
+			for _, typ := range t.FileTypes() {
+				if typ == ext {
+					return
 				}
-				err = fmt.Errorf("Invalid file type %q", ext)
-			})
-		}
+			}
+			err = fmt.Errorf("Invalid file type %q", ext)
+		})
 	}
 
-	if tag, ok := tags["MAX-SIZE"]; ok {
-		maxSize, err = bytefmt.ToBytes(strings.TrimSpace(tag))
-		if err != nil {
-			return fmt.Errorf("Parse Field TAG MAX-SIZE: %v", err)
-		}
-
+	if e, ok := data.(AcceptExts); ok {
+		ext := strings.ToLower(filepath.Ext(fileName)[1:])
 		check = append(check, func() {
+			for _, typ := range e.FileExts() {
+				if typ == ext {
+					return
+				}
+			}
+			err = fmt.Errorf("Invalid file extension %q", ext)
+		})
+	}
+
+	if ms, ok := data.(MaxSize); ok {
+		check = append(check, func() {
+			maxSize := ms.MaxSize()
 			if size > maxSize {
 				err = fmt.Errorf("Very large file. The expected maximum size is %s, but obtained %s.",
 					humanize.Bytes(maxSize), humanize.Bytes(size))
@@ -203,8 +230,8 @@ func (b *Base) CallFieldScan(field *reflect.StructField, data interface{}, scan 
 	return scan(data)
 }
 
-func (b *Base) FieldScan(field *reflect.StructField, data interface{}) (err error) {
-	return b.CallFieldScan(field, data, b.Scan)
+func (b *Base) ContextScan(ctx *core.Context, data interface{}) (err error) {
+	return b.CallContextScan(ctx, data, b.Scan)
 }
 
 // Scan scan files, crop options, db values into struct
@@ -280,7 +307,7 @@ func (b Base) Ext() string {
 
 // URL return file's url with given style
 func (b Base) URL(styles ...string) string {
-	if b.Url != "" && len(styles) > 0 {
+	if b.Url != "" && len(styles) > 0 && styles[0] != "" {
 		return MediaStyleURL(b.Url, styles[0])
 	}
 	return b.Url
@@ -419,6 +446,10 @@ func (b Base) IsSVG() bool {
 	return IsSVGFormat(b.URL())
 }
 
+func (b Base) IsZero() bool {
+	return b.FileName == ""
+}
+
 // ConfigureQorMetaBeforeInitialize configure this field for Qor Admin
 func (Base) ConfigureQorMetaBeforeInitialize(meta resource.Metaor) {
 	if meta, ok := meta.(*admin.Meta); ok {
@@ -428,7 +459,7 @@ func (Base) ConfigureQorMetaBeforeInitialize(meta resource.Metaor) {
 
 		if meta.GetFormattedValuer() == nil {
 			meta.SetFormattedValuer(func(value interface{}, context *core.Context) interface{} {
-				return utils.Stringify(meta.GetValuer()(value, context))
+				return utils.StringifyContext(meta.Value(context, value), context)
 			})
 		}
 	}

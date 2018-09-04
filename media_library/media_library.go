@@ -93,133 +93,31 @@ func (QorMediaLibrary) ConfigureQorResource(res resource.Resourcer) {
 }
 
 type MediaLibraryStorage struct {
-	oss.OSS
-	Sizes        map[string]*media.Size `json:",omitempty"`
+	oss.Image
 	Video        string
 	SelectedType string
 	Description  string
 }
 
-func (mediaLibraryStorage *MediaLibraryStorage) RemoveOld() (found bool, err error) {
-	if mediaLibraryStorage.Old != nil {
-		for name, _ := range mediaLibraryStorage.GetSizes() {
-			mediaLibraryStorage.Old().AddName(name)
-		}
-	}
-	return mediaLibraryStorage.OSS.RemoveOld()
-}
-
-// gorm/scope.scan()
-func (mediaLibraryStorage *MediaLibraryStorage) AfterScan(db *aorm.DB, field *aorm.Field) {
-	mediaLibraryStorage.OSS.AfterScan(db, field)
-}
-
-func (mediaLibraryStorage MediaLibraryStorage) Names() []string {
-	names := mediaLibraryStorage.OSS.Names()
-	return append(names, "@qor_preview")
-}
-
-func (mediaLibraryStorage MediaLibraryStorage) GetSizes() map[string]*media.Size {
-	if len(mediaLibraryStorage.Sizes) == 0 && !(mediaLibraryStorage.GetFileHeader() != nil || mediaLibraryStorage.Crop) {
-		return map[string]*media.Size{}
-	}
-
-	var sizes = map[string]*media.Size{
-		"@qor_preview": &media.Size{Width: 200, Height: 200},
-	}
-
-	for key, value := range mediaLibraryStorage.Sizes {
-		sizes[key] = value
-	}
-	return sizes
-}
-
-func (mediaLibraryStorage *MediaLibraryStorage) MetaScan(data interface{}) (err error) {
-	err = mediaLibraryStorage.Scan(data)
-	if err != nil {
-		return err
-	}
-	if mediaLibraryStorage.Url != "" {
-		endpoint := media.MediaURL(mediaLibraryStorage.Storage().GetEndpoint())
-		mediaLibraryStorage.Url = strings.TrimPrefix(mediaLibraryStorage.Url, endpoint)
-	}
-	return nil
-}
-
-func (mediaLibraryStorage *MediaLibraryStorage) FieldScan(field *reflect.StructField, data interface{}) (err error) {
-	return mediaLibraryStorage.CallFieldScan(field, data, mediaLibraryStorage.Scan)
-}
-
-func (mediaLibraryStorage *MediaLibraryStorage) Scan(data interface{}) (err error) {
-	switch values := data.(type) {
-	case []byte:
-		if mediaLibraryStorage.Sizes == nil {
-			mediaLibraryStorage.Sizes = map[string]*media.Size{}
-		}
-		if mediaLibraryStorage.CropOptions == nil {
-			mediaLibraryStorage.CropOptions = map[string]*media.CropOption{}
-		}
-		cropOptions := mediaLibraryStorage.CropOptions
-		sizeOptions := mediaLibraryStorage.Sizes
-
-		if string(values) != "" {
-			mediaLibraryStorage.Base.Scan(values)
-
-			if err = json.Unmarshal(values, mediaLibraryStorage); err == nil {
-				for key, value := range cropOptions {
-					if _, ok := mediaLibraryStorage.CropOptions[key]; !ok {
-						mediaLibraryStorage.CropOptions[key] = value
-					}
-				}
-
-				for key, value := range sizeOptions {
-					if _, ok := mediaLibraryStorage.Sizes[key]; !ok {
-						mediaLibraryStorage.Sizes[key] = value
-					}
-				}
-
-				for key, value := range mediaLibraryStorage.CropOptions {
-					if _, ok := mediaLibraryStorage.Sizes[key]; !ok {
-						mediaLibraryStorage.Sizes[key] = &media.Size{Width: value.Width, Height: value.Height}
-					}
-				}
-			}
-		}
-	case string:
-		err = mediaLibraryStorage.Scan([]byte(values))
-	case []string:
-		for _, str := range values {
-			if err = mediaLibraryStorage.Scan(str); err != nil {
-				return err
-			}
-		}
-	default:
-		return mediaLibraryStorage.Base.Scan(data)
-	}
-	return nil
-}
-
-func (mediaLibraryStorage MediaLibraryStorage) Value() (driver.Value, error) {
-	results, err := json.Marshal(mediaLibraryStorage)
+func (mls MediaLibraryStorage) Value() (driver.Value, error) {
+	results, err := json.Marshal(mls)
 	return string(results), err
 }
 
-func (mediaLibraryStorage MediaLibraryStorage) Export() (string, error) {
-	if mediaLibraryStorage.Storage() != nil {
-		mediaLibraryStorage.Url = media.MediaURL(mediaLibraryStorage.Storage().GetEndpoint(), mediaLibraryStorage.Url)
+func (mls MediaLibraryStorage) Export() (string, error) {
+	if mls.Storage() != nil {
+		mls.Url = media.MediaURL(mls.Storage().GetEndpoint(), mls.Url)
 	}
-	results, err := json.Marshal(mediaLibraryStorage)
+	results, err := json.Marshal(mls)
 	return string(results), err
 }
 
-func (mediaLibraryStorage MediaLibraryStorage) ConfigureQorMeta(metaor resource.Metaor) {
+func (mls MediaLibraryStorage) ConfigureQorMetaBeforeInitialize(metaor resource.Metaor) {
 	if meta, ok := metaor.(*admin.Meta); ok {
 		if meta.Type == "" {
 			meta.Type = "media_library"
 		}
-		meta.SetFormattedValuer(func(record interface{}, context *core.Context) interface{} {
-			return meta.GetValuer()(record, context)
-		})
+		mls.Image.ConfigureQorMetaBeforeInitialize(meta)
 	}
 }
 
