@@ -181,7 +181,7 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 				if dataResource == nil {
 					panic("Imposible to auto detect RemoteDataResource \"QorMediaLibrary\".")
 				}
-				config.RemoteDataResource = &admin.DataResource{Resource: dataResource}
+				config.RemoteDataResource = admin.NewDataResource(dataResource)
 			}
 
 			if _, ok := config.RemoteDataResource.Resource.Value.(MediaLibraryInterface); !ok {
