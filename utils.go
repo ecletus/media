@@ -7,11 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/disintegration/imaging"
 	"github.com/aghape/core/utils"
+	"github.com/disintegration/imaging"
 )
 
-func getImageFormat(url string) (*imaging.Format, error) {
+func GetImageFormat(url string) (*imaging.Format, error) {
 	formats := map[string]imaging.Format{
 		".jpg":  imaging.JPEG,
 		".jpeg": imaging.JPEG,
@@ -31,17 +31,15 @@ func getImageFormat(url string) (*imaging.Format, error) {
 
 // IsImageFormat check filename is image or not
 func IsImageFormat(name string) bool {
-	_, err := getImageFormat(name)
+	_, err := GetImageFormat(name)
 	return err == nil
 }
 
 // IsVideoFormat check filename is video or not
 func IsVideoFormat(name string) bool {
-	formats := []string{".mp4", ".m4p", ".m4v", ".m4v", ".mov", ".mpeg", ".webm", ".avi", ".ogg", ".ogv"}
-
 	ext := strings.ToLower(regexp.MustCompile(`(\?.*?$)`).ReplaceAllString(filepath.Ext(name), ""))
 
-	for _, format := range formats {
+	for _, format := range videoFormats {
 		if format == ext {
 			return true
 		}
@@ -64,7 +62,7 @@ func IsSVGFormat(name string) bool {
 	return false
 }
 
-func parseTagOption(str string) *Option {
+func ParseTagOption(str string) *Option {
 	option := Option(utils.ParseTagOption(str))
 	return &option
 }

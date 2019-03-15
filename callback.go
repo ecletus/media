@@ -1,153 +1,77 @@
 package media
 
 import (
-	"encoding/json"
-	"errors"
-	"mime/multipart"
 	"reflect"
 
+	"github.com/moisespsena/go-error-wrap"
+
 	"github.com/aghape/core"
-	"github.com/aghape/serializable_meta"
 	"github.com/moisespsena-go/aorm"
 )
 
-var E_SAVE_AND_CROP = PKG + ":save_and_crop"
-var DB_CALLBACK_IGNORE = PKG + ".callback.ignore"
+var E_DELETE = PKG + ":delete"
+var DB_DELETE_IGNORE = PKG + ".delete.ignore"
 
 func IgnoreCallback(db *aorm.DB) *aorm.DB {
-	return db.Set(DB_CALLBACK_IGNORE, true)
+	return db.Set(DB_DELETE_IGNORE, true)
 }
 
 func IsIgnoreCallback(v interface{}) bool {
 	switch t := v.(type) {
 	case *aorm.DB:
-		v, ok := t.Get(DB_CALLBACK_IGNORE)
+		v, ok := t.Get(DB_DELETE_IGNORE)
 		return v != nil && ok
 	case *aorm.Scope:
-		v, ok := t.Get(DB_CALLBACK_IGNORE)
+		v, ok := t.Get(DB_DELETE_IGNORE)
 		return v != nil && ok
 	}
 	return false
 }
-func fieldOption(field *aorm.Field) *Option {
-	return parseTagOption(field.Tag.Get("media_library"))
-}
 
-func cropField(field *aorm.Field, scope *aorm.Scope) (cropped bool) {
+func deleteField(field *aorm.Field, scope *aorm.Scope) (changed bool) {
 	if field.Field.CanAddr() {
-		// TODO Handle scanner
-		if media, ok := field.Field.Addr().Interface().(Media); ok && !media.Cropped() {
+		if media, ok := field.Field.Addr().Interface().(Media); ok {
 			media.Init(core.GetSiteFromDB(scope.DB()), field)
-			option := media.FieldOption()
 
-			if media.GetFileHeader() != nil || media.NeedCrop() {
-				var file multipart.File
-				var err error
-				if fileHeader := media.GetFileHeader(); fileHeader != nil {
-					file, err = media.GetFileHeader().Open()
-				} else {
-					file, err = media.Retrieve(media.URL("original"))
+			for _, url := range media.OlderURL() {
+				if _, err := media.Remove(url); err != nil {
+					scope.Err(errwrap.Wrap(err, "Remove OLD media %q", url))
+					return false
 				}
+			}
 
+			if media.Deletable() {
+				_, err := media.RemoveAll(media)
 				if err != nil {
-					scope.Err(err)
-					return false
-				}
-
-				media.Cropped(true)
-
-				var url string
-
-				if url = media.GetURL(scope, field, media); url == "" {
-					scope.Err(errors.New("invalid URL"))
-					return false
+					scope.Err(errwrap.Wrap(err, "Remove media"))
 				} else {
-					result, _ := json.Marshal(map[string]string{"Url": url})
-					media.Scan(string(result))
-				}
-
-				if file != nil {
-					defer file.Close()
-					var handled = false
-					for _, handler := range mediaHandlers {
-						if handler.CouldHandle(media) {
-							file.Seek(0, 0)
-							if scope.Err(handler.Handle(media, file, option)) == nil {
-								handled = true
-							}
-						}
-					}
-
-					// Save File
-					if !handled {
-						scope.Err(media.Store(url, file))
-					}
+					field.Field.Set(reflect.New(field.Struct.Type).Elem())
 				}
 				return true
 			}
+
+			return false
 		}
 	}
-	return false
+	return changed
 }
 
-func saveAndCropImage(isCreate bool) func(scope *aorm.Scope) {
-	return func(scope *aorm.Scope) {
-		if IsIgnoreCallback(scope) {
-			return
-		}
-		if !scope.HasError() {
-			var updateColumns = map[string]interface{}{}
-
-			// Handle SerializableMeta
-			if value, ok := scope.Value.(serializable_meta.SerializableMetaInterface); ok {
-				var (
-					isCropped        bool
-					handleNestedCrop func(record interface{})
-				)
-
-				handleNestedCrop = func(record interface{}) {
-					newScope := scope.New(record)
-					for _, field := range newScope.Fields() {
-						if cropField(field, scope) {
-							isCropped = true
-							continue
-						}
-
-						if reflect.Indirect(field.Field).Kind() == reflect.Struct {
-							handleNestedCrop(field.Field.Addr().Interface())
-						}
-
-						if reflect.Indirect(field.Field).Kind() == reflect.Slice {
-							for i := 0; i < reflect.Indirect(field.Field).Len(); i++ {
-								handleNestedCrop(reflect.Indirect(field.Field).Index(i).Addr().Interface())
-							}
-						}
-					}
-				}
-
-				record := value.GetSerializableArgument(value)
-				handleNestedCrop(record)
-				if isCreate && isCropped {
-					updateColumns["value"], _ = json.Marshal(record)
-				}
-			}
-
-			// Handle Normal Field
-			for _, field := range scope.Fields() {
-				if cropField(field, scope) && isCreate {
-					updateColumns[field.DBName] = field.Field.Interface()
-				}
-			}
-
-			if !scope.HasError() && len(updateColumns) != 0 {
-				scope.Err(scope.NewDB().Model(scope.Value).UpdateColumns(updateColumns).Error)
-			}
+func deleteCallback(scope *aorm.Scope) {
+	if IsIgnoreCallback(scope) {
+		return
+	}
+	if !scope.HasError() {
+		// TODO: Handle update attrs
+		// "gorm:update_attrs"
+		// Handle Normal Field
+		for _, field := range scope.Fields() {
+			deleteField(field, scope)
 		}
 	}
 }
 
 // RegisterCallbacks register callback into GORM DB
 func RegisterCallbacks(db *aorm.DB) {
-	db.Callback().Update().Before("gorm:before_update").Register(E_SAVE_AND_CROP, saveAndCropImage(false))
-	db.Callback().Create().After("gorm:after_create").Register(E_SAVE_AND_CROP, saveAndCropImage(true))
+	db.Callback().Update().Before("gorm:before_update").Register(E_DELETE, deleteCallback)
+	db.Callback().Delete().Before("gorm:before_delete").Register(E_DELETE, deleteCallback)
 }

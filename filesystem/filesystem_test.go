@@ -1,6 +1,7 @@
 package filesystem_test
 
 import (
+	"github.com/aghape/media/oss"
 	"image"
 	"image/gif"
 	"os"
@@ -9,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moisespsena-go/aorm"
+	"github.com/aghape/core/test/utils"
 	"github.com/aghape/media"
 	"github.com/aghape/media/filesystem"
-	"github.com/aghape/core/test/utils"
+	"github.com/moisespsena-go/aorm"
 )
 
 var db = utils.TestDB()
@@ -21,8 +22,8 @@ type MyFileSystem struct {
 	filesystem.FileSystem
 }
 
-func (MyFileSystem) GetSizes() map[string]*media.Size {
-	return map[string]*media.Size{
+func (MyFileSystem) GetSizes() map[string]*oss.Size {
+	return map[string]*oss.Size{
 		"small1": {20, 10},
 		"small2": {20, 10},
 		"square": {30, 30},

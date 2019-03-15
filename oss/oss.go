@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/aghape/core"
+
 	"github.com/aghape/media"
 	"github.com/aghape/oss"
 	"github.com/aghape/oss/filesystem"
@@ -15,10 +17,8 @@ import (
 
 var (
 	// Storage the storage used to save medias
-	FileSystemStorage = filesystem.New("./data")
-	// URLTemplate default URL template
-	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
-	PKG         = path_helpers.GetCalledDir()
+	FileSystemStorage = filesystem.New(&filesystem.Config{RootDir: "./data"})
+	PKG               = path_helpers.GetCalledDir()
 )
 
 func init() {
@@ -27,15 +27,31 @@ func init() {
 	aorm.StructFieldMethodCallbacks.RegisterFieldType(&OSS{})
 }
 
+type OSSInterface interface {
+	media.Media
+	IsNew() bool
+}
+
 // OSS common storage interface
 type OSS struct {
 	media.Base
+	isNew   bool
+	callSet bool
+}
+
+func (o OSS) IsNew() bool {
+	return o.isNew
 }
 
 // DefaultStoreHandler used to store reader with default Storage
 var DefaultStoreHandler = func(storage oss.StorageInterface, path string, option *media.Option, reader io.Reader) error {
 	_, err := storage.Put(path, reader)
 	return err
+}
+
+func (o *OSS) Init(site core.SiteInterface, field *aorm.Field) {
+	o.Base.Init(site, field)
+	o.GetOrSetFieldOption().ParseFieldTag("oss", &field.Tag)
 }
 
 // Store save reader's content with path
@@ -49,41 +65,48 @@ var DefaultRemoveHandler = func(storage oss.StorageInterface, path string, optio
 }
 
 // Remove content by path
-func (o *OSS) Remove(path string) error {
-	return DefaultRemoveHandler(o.Storage(), path, o.FieldOption())
+func (o *OSS) Remove(path string) (found bool, err error) {
+	_, notFound, err := o.Storage().Stat(path)
+	if err != nil {
+		return true, fmt.Errorf("Get stat for %q fail: %v", path, err)
+	}
+	if notFound {
+		return false, nil
+	}
+	err = DefaultRemoveHandler(o.Storage(), path, o.FieldOption())
+	if err != nil {
+		return true, fmt.Errorf("Remove %q fail: %v", path, err)
+	}
+	return true, nil
 }
 
-func (o *OSS) RemoveOld() (found bool, err error) {
-	if o.Old != nil {
-		remove := func(url string) (bool, error) {
-			_, notFound, err := o.Storage().Stat(url)
-			if err != nil {
-				return true, fmt.Errorf("Get stat for %q fail: %v", url, err)
-			}
-			if notFound {
-				return false, nil
-			}
-			err = o.Remove(url)
-			if err != nil {
-				return true, fmt.Errorf("Remove %q fail: %v", url, err)
-			}
-			return true, nil
-		}
-		old := o.Old()
-		found, err = remove(old.Url)
-		if err != nil {
-			return found, err
-		}
-		if found {
-			for _, key := range old.Names() {
-				_, err = remove(media.MediaStyleURL(old.Url, key))
-				if err != nil {
-					return true, err
-				}
-			}
-		}
+func (o *OSS) Set(ctx *media.Context, data interface{}) (err error) {
+	if !o.callSet {
+		o.callSet = true
+		defer func() {
+			o.callSet = false
+		}()
+	}
+	header := o.FileHeader
+	if err = o.Base.Set(ctx, data); err != nil {
+		return
+	}
+	if !o.isNew && header == nil && o.FileHeader != nil {
+		o.isNew = true
 	}
 	return
+}
+
+func (o *OSS) Scan(data interface{}) (err error) {
+	return o.MediaScan(media.NewContext(o), data)
+}
+
+func (o *OSS) ContextScan(ctx *core.Context, data interface{}) (err error) {
+	return o.Set(media.NewContext(o), data)
+}
+
+func (o *OSS) MediaScan(ctx *media.Context, data interface{}) (err error) {
+	return o.Base.MediaScan(ctx, data)
 }
 
 // DefaultRetrieveHandler used to retrieve file

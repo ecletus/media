@@ -11,7 +11,7 @@ type Plugin struct {
 }
 
 func (p *Plugin) OnRegister() {
-	db.Events(p).DBOnMigrateGorm(func(e *db.GormDBEvent) error {
-		return e.DB.AutoMigrate(&QorMediaLibrary{}).Error
+	db.Events(p).DBOnMigrate(func(e *db.DBEvent) error {
+		return e.AutoMigrate(&QorMediaLibrary{}).Error
 	})
 }

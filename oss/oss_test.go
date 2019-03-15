@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moisespsena-go/aorm"
+	"github.com/aghape/core/test/utils"
 	"github.com/aghape/media"
 	"github.com/aghape/media/oss"
-	"github.com/aghape/core/test/utils"
+	"github.com/moisespsena-go/aorm"
 )
 
 var db = utils.TestDB()
@@ -21,8 +21,8 @@ type MyFileSystem struct {
 	oss.OSS
 }
 
-func (MyFileSystem) GetSizes() map[string]*media.Size {
-	return map[string]*media.Size{
+func (MyFileSystem) GetSizes() map[string]*Size {
+	return map[string]*Size{
 		"small1": {20, 10},
 		"small2": {20, 10},
 		"square": {30, 30},

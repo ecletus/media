@@ -3,11 +3,15 @@ package oss
 import (
 	"path/filepath"
 
-	"github.com/aghape/plug"
+	"github.com/aghape/db"
+
 	"github.com/aghape/core"
+	"github.com/aghape/plug"
 )
 
 type Plugin struct {
+	db.DBNames
+	plug.EventDispatcher
 	SetupConfigKey string
 }
 
@@ -21,4 +25,10 @@ func (p *Plugin) Init(options *plug.Options) error {
 		FileSystemStorage.Base = filepath.Join(config.Root(), "data")
 	}
 	return nil
+}
+
+func (p *Plugin) OnRegister() {
+	db.Events(p).DBOnInitGorm(func(e *db.DBEvent) {
+		RegisterCallbacks(e.DB.DB)
+	})
 }

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image"
 	"io"
 	"mime/multipart"
 	"os"
@@ -18,8 +17,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/moisespsena/go-error-wrap"
+
 	"github.com/aghape/admin"
 	"github.com/aghape/core"
+	"github.com/aghape/core/helpers"
 	"github.com/aghape/core/resource"
 	"github.com/aghape/core/utils"
 	"github.com/aghape/oss"
@@ -27,6 +29,11 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jinzhu/inflection"
 	"github.com/moisespsena-go/aorm"
+)
+
+var (
+	// URLTemplate default URL template
+	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_slug}}"
 )
 
 type FullURL interface {
@@ -60,11 +67,6 @@ type URLContextStyle interface {
 	URL(ctx *core.Context, styles ...string) string
 }
 
-// CropOption includes crop options
-type CropOption struct {
-	X, Y, Width, Height int
-}
-
 // FileHeader is an interface, for matched values, when call its `Open` method will return `multipart.File`
 type FileHeader interface {
 	Open() (multipart.File, error)
@@ -83,24 +85,33 @@ type Base struct {
 	FileName    string
 	Url         string
 	FileSize    int64
-	CropOptions map[string]*CropOption `json:",omitempty"`
-	Delete      bool                   `json:"-"`
-	Crop        bool                   `json:"-"`
-	FileHeader  FileHeader             `json:"-"`
-	Reader      io.Reader              `json:"-"`
-	cropped     bool
+	Delete      bool       `json:"-"`
+	FileHeader  FileHeader `json:"-"`
+	Reader      io.Reader  `json:"-"`
 	site        core.SiteInterface
-	storage     oss.StorageInterface
+	storage     oss.NamedStorageInterface
 	field       *aorm.Field
 	fieldOption *Option
-	old         *Old `json:"-"`
+	old         []string
 }
 
-func (b *Base) Old() *Old {
+func (Base) GormDataType(dialect aorm.Dialect) string {
+	return "text"
+}
+
+func (b *Base) Store(url string, reader io.Reader) error {
+	panic("implement me")
+}
+
+func (b *Base) OlderURL() []string {
 	return b.old
 }
 
 func (b *Base) Names() (names []string) {
+	return names
+}
+
+func (b *Base) SystemNames() (names []string) {
 	return names
 }
 
@@ -112,11 +123,32 @@ func (b *Base) SetSite(site core.SiteInterface) {
 	b.site = site
 }
 
-func (b *Base) Storage() oss.StorageInterface {
+func (b *Base) Storage() oss.NamedStorageInterface {
 	return b.storage
 }
 
-func (b *Base) SetStorage(storage oss.StorageInterface) {
+func (b *Base) Remove(url string) (found bool, err error) {
+	panic("not implemented error")
+}
+
+func (b *Base) RemoveAll(media Media) (found bool, err error) {
+	if found, err = media.Remove(media.URL()); err != nil {
+		return found, errwrap.Wrap(err, "Remove %q", media.GetFileName())
+	}
+
+	for _, key := range append(media.SystemNames(), media.Names()...) {
+		var f bool
+		if f, err = media.Remove(media.URL(key)); err != nil {
+			return f, errwrap.Wrap(err, "Remove style %q", key)
+		}
+		if f {
+			found = true
+		}
+	}
+	return
+}
+
+func (b *Base) SetStorage(storage oss.NamedStorageInterface) {
 	b.storage = storage
 }
 
@@ -124,46 +156,83 @@ func (b *Base) FieldOption() *Option {
 	return b.fieldOption
 }
 
+func (b *Base) GetOrSetFieldOption() *Option {
+	if b.fieldOption == nil {
+		option := make(Option)
+		b.fieldOption = &option
+	}
+	return b.fieldOption
+}
+
 func (b *Base) SetFieldOption(option *Option) {
 	b.fieldOption = option
 }
 
-func (b *Base) SetFile(fileName string, fileSize int64, fileHeader FileHeader) {
-	if b.FileName != "" {
-		b.old = &Old{b.Url, make(map[string]int)}
-		b.old.AddName(b.Names()...)
-	}
+func (b *Base) setFile(fileName string, fileSize int64, fileHeader FileHeader) {
 	b.FileName = fileName
 	b.FileHeader = fileHeader
 	b.FileSize = fileSize
-	b.CropOptions = make(map[string]*CropOption)
 }
 
-func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(data interface{}) error) (err error) {
+func (b *Base) setZero() {
+	b.setFile("", 0, nil)
+	b.Url = ""
+}
+
+func (b *Base) AllNames(m Media) []string {
+	return append(m.SystemNames(), m.Names()...)
+}
+
+func (b *Base) Set(ctx *Context, data interface{}) (err error) {
 	var (
-		types    []string
 		fileName string
+		fileType string
 		size     uint64
-		maxSize  uint64
 		check    []func()
+
+		currentFileName = b.FileName
+		currentFileSize = b.FileSize
+
+		m = ctx.Media
 	)
 
-	if t, ok := data.(AcceptTypes); ok {
-		ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileName), "."))
-		check = append(check, func() {
-			for _, typ := range t.FileTypes() {
-				if typ == ext {
-					return
+	if m.HasFile() {
+		currentUrls := []string{m.URL()}
+
+		for _, key := range m.AllNames(m) {
+			currentUrls = append(currentUrls, m.URL(key))
+		}
+
+		defer func() {
+			if err == nil {
+				if currentFileName != b.FileName || currentFileSize != b.FileSize {
+					b.old = currentUrls
 				}
 			}
-			err = fmt.Errorf("Invalid file type %q", ext)
+		}()
+	}
+
+	if t, ok := m.(AcceptTypes); ok {
+		ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fileName), "."))
+		check = append(check, func() {
+			if fileType != "" {
+				for _, typ := range t.FileTypes() {
+					if typ == ext {
+						return
+					}
+				}
+				err = fmt.Errorf("Invalid file type %q", ext)
+			}
 		})
 	}
 
-	if e, ok := data.(AcceptExts); ok {
-		ext := strings.ToLower(filepath.Ext(fileName)[1:])
+	if e, ok := m.(AcceptExts); ok {
 		check = append(check, func() {
+			ext := strings.ToLower(filepath.Ext(fileName)[1:])
 			for _, typ := range e.FileExts() {
+				if ext[0] == '.' {
+					ext = ext[1:]
+				}
 				if typ == ext {
 					return
 				}
@@ -172,7 +241,7 @@ func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(da
 		})
 	}
 
-	if ms, ok := data.(MaxSize); ok {
+	if ms, ok := m.(MaxSize); ok {
 		check = append(check, func() {
 			maxSize := ms.MaxSize()
 			if size > maxSize {
@@ -182,7 +251,7 @@ func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(da
 		})
 	}
 
-	if len(types) > 0 || maxSize > 0 {
+	if check != nil {
 		switch values := data.(type) {
 		case *os.File:
 			fileName = values.Name()
@@ -194,6 +263,7 @@ func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(da
 		case *multipart.FileHeader:
 			fileName = values.Filename
 			size = uint64(values.Size)
+			fileType = values.Header.Get("Content-Type")
 		case []*multipart.FileHeader:
 			if len(values) == 1 {
 				if file := values[0]; file.Size > 0 {
@@ -205,6 +275,7 @@ func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(da
 					if file.Size > 0 {
 						fileName = file.Filename
 						size = uint64(file.Size)
+						fileType = file.Header.Get("Content-Type")
 						for _, cb := range check {
 							cb()
 							if err != nil {
@@ -227,17 +298,34 @@ func (b *Base) CallContextScan(ctx *core.Context, data interface{}, scan func(da
 		}
 	}
 
-	return scan(data)
+	return m.MediaScan(ctx, data)
 }
 
 func (b *Base) ContextScan(ctx *core.Context, data interface{}) (err error) {
-	return b.CallContextScan(ctx, data, b.Scan)
+	return b.Set(NewContext(b), data)
 }
 
-// Scan scan files, crop options, db values into struct
-func (b *Base) Scan(data interface{}) (err error) {
+func (b *Base) ScanBytes(ctx *Context, data []byte) (err error) {
+	if len(data) == 0 {
+		b.setZero()
+	} else {
+		if err = json.Unmarshal(data, b); err == nil {
+			var options struct {
+				Delete bool
+			}
+			if err = json.Unmarshal(data, &options); err == nil {
+				if options.Delete {
+					b.Delete = true
+				}
+			}
+		}
+	}
+	return
+}
+
+func (b *Base) MediaScan(ctx *Context, data interface{}) (err error) {
 	if data == nil {
-		b.SetFile("", 0, &fileWrapper{})
+		b.setZero()
 		return nil
 	}
 	switch values := data.(type) {
@@ -246,59 +334,44 @@ func (b *Base) Scan(data interface{}) (err error) {
 		if err != nil {
 			return err
 		}
-		b.SetFile(filepath.Base(values.Name()), stat.Size(), &fileWrapper{values})
+		b.setFile(filepath.Base(values.Name()), stat.Size(), &fileWrapper{values})
 	case *multipart.FileHeader:
-		b.SetFile(values.Filename, values.Size, values)
+		b.setFile(values.Filename, values.Size, values)
 	case []*multipart.FileHeader:
 		if len(values) > 0 {
 			return b.Scan(values[0])
 		}
 	case []byte:
-		if string(values) != "" {
-			if err = json.Unmarshal(values, b); err == nil {
-				var options struct {
-					Crop   bool
-					Delete bool
-				}
-				if err = json.Unmarshal(values, &options); err == nil {
-					if options.Crop {
-						b.Crop = true
-					}
-					if options.Delete {
-						b.Delete = true
-					}
-				}
-			}
-		}
+		return b.ScanBytes(ctx, values)
 	case string:
-		return b.Scan([]byte(values))
+		return b.ScanBytes(ctx, []byte(values))
 	case []string:
 		for _, str := range values {
-			if err := b.Scan(str); err != nil {
+			if err := b.ScanBytes(ctx, []byte(str)); err != nil {
 				return err
 			}
 		}
 	default:
 		err = errors.New("unsupported driver -> Scan pair for MediaLibrary")
 	}
-
-	// If image is deleted, then clean up all values, for serialized fields
-	if b.Delete {
-		b.Url = ""
-		b.FileName = ""
-		b.CropOptions = nil
-	}
 	return
+}
+
+func (b *Base) Scan(data interface{}) (err error) {
+	return b.MediaScan(NewContext(b), data)
+}
+
+func (b Base) DBValue(media Media) (driver.Value, error) {
+	if media.IsZero() {
+		return "", nil
+	}
+	results, err := json.Marshal(media)
+	return string(results), err
 }
 
 // Value return struct's Value
 func (b Base) Value() (driver.Value, error) {
-	if b.Delete {
-		return nil, nil
-	}
-
-	results, err := json.Marshal(b)
-	return string(results), err
+	return b.DBValue(&b)
 }
 
 func (b Base) Ext() string {
@@ -307,6 +380,9 @@ func (b Base) Ext() string {
 
 // URL return file's url with given style
 func (b Base) URL(styles ...string) string {
+	if b.IsZero() {
+		return ""
+	}
 	if b.Url != "" && len(styles) > 0 && styles[0] != "" {
 		return MediaStyleURL(b.Url, styles[0])
 	}
@@ -322,11 +398,13 @@ func (b *Base) Init(site core.SiteInterface, field *aorm.Field) {
 	if b.site == nil {
 		b.site = site
 	}
-	if b.fieldOption == nil {
-		b.fieldOption = fieldOption(field)
+
+	if field != nil {
+		b.GetOrSetFieldOption().ParseFieldTag("media", &field.Tag)
 	}
+
 	if b.storage == nil {
-		b.storage = b.site.GetMediaStorageOrDefault(b.fieldOption.Get("storage"))
+		b.storage = b.site.GetMediaStorageOrDefault(b.fieldOption.Get(OPT_STORAGE))
 	}
 }
 
@@ -348,37 +426,51 @@ func (b Base) GetFileHeader() FileHeader {
 // GetURLTemplate get url template
 func (b Base) GetURLTemplate(option *Option) (path string) {
 	if path = b.fieldOption.Get("URL"); path == "" {
-		path = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_with_hash}}"
+		path = URLTemplate
 	}
 	return
 }
 
-func (b Base) FullURL(styles ...string) (url string) {
-	url = strings.TrimSuffix(strings.Join([]string{b.storage.GetEndpoint(),
-		strings.TrimPrefix(b.URL(styles...), "/")}, "/"), "/")
+func (b Base) FullURL(ctx *core.Context, styles ...string) (url string) {
+	if b.IsZero() {
+		return ""
+	}
+	ep := helpers.GetStorageEndpointFromContext(ctx, b.storage)
+	url = b.URL(styles...)
+	url = ep + url
+	url = strings.TrimSuffix(url, "/")
 	if strings.HasPrefix(url, "/") {
 		return url
 	}
 	return MediaURL(url)
 }
 
-func (b Base) FullURLU(styles ...string) (url string) {
-	return b.FullURL(styles...) + "?_=" + strconv.Itoa(time.Now().Nanosecond())
+func (b Base) FullURLU(ctx *core.Context, styles ...string) (url string) {
+	if b.IsZero() {
+		return ""
+	}
+	return b.FullURL(ctx, styles...) + "?_=" + strconv.Itoa(time.Now().Nanosecond())
 }
 
 var urlReplacer = regexp.MustCompile("(\\s|\\+)+")
 
 func getFuncMap(scope *aorm.Scope, field *aorm.Field, filename string) template.FuncMap {
 	hash := func() string { return strings.Replace(time.Now().Format("20060102150506.000000000"), ".", "", -1) }
+	slugFileName := func() string {
+		return slug.Make(strings.TrimSuffix(path.Base(filename), path.Ext(filename)))
+	}
 	return template.FuncMap{
 		"class":       func() string { return inflection.Plural(utils.ToParamString(scope.GetModelStruct().ModelType.Name())) },
 		"primary_key": func() string { return fmt.Sprintf("%v", scope.PrimaryKeyValue()) },
 		"column":      func() string { return strings.ToLower(field.Name) },
 		"filename":    func() string { return filename },
-		"basename":    func() string { return strings.TrimSuffix(path.Base(filename), path.Ext(filename)) },
-		"hash":        hash,
+		"filename_slug": func() string {
+			return urlReplacer.ReplaceAllString(slugFileName()+path.Ext(filename), "-")
+		},
+		"basename": func() string { return strings.TrimSuffix(path.Base(filename), path.Ext(filename)) },
+		"hash":     hash,
 		"filename_with_hash": func() string {
-			return urlReplacer.ReplaceAllString(fmt.Sprintf("%s.%v%v", slug.Make(strings.TrimSuffix(path.Base(filename), path.Ext(filename))), hash(), path.Ext(filename)), "-")
+			return urlReplacer.ReplaceAllString(fmt.Sprintf("%s.%v%v", slugFileName(), hash(), path.Ext(filename)), "-")
 		},
 		"extension": func() string { return strings.TrimPrefix(path.Ext(filename), ".") },
 	}
@@ -386,9 +478,9 @@ func getFuncMap(scope *aorm.Scope, field *aorm.Field, filename string) template.
 
 // GetURL get default URL for a model based on its options
 func (b Base) GetURL(scope *aorm.Scope, field *aorm.Field, templater URLTemplater) string {
-	if path := templater.GetURLTemplate(b.fieldOption); path != "" {
+	if pth := templater.GetURLTemplate(b.fieldOption); pth != "" {
 		tmpl := template.New("").Funcs(getFuncMap(scope, field, b.GetFileName()))
-		if tmpl, err := tmpl.Parse(path); err == nil {
+		if tmpl, err := tmpl.Parse(pth); err == nil {
 			var result = bytes.NewBufferString("")
 			if err := tmpl.Execute(result, scope.Value); err == nil {
 				return result.String()
@@ -398,39 +490,9 @@ func (b Base) GetURL(scope *aorm.Scope, field *aorm.Field, templater URLTemplate
 	return ""
 }
 
-// Cropped mark the image to be cropped
-func (b *Base) Cropped(values ...bool) (result bool) {
-	result = b.cropped
-	for _, value := range values {
-		b.cropped = value
-	}
-	return result
-}
-
-// NeedCrop return the file needs to be cropped or not
-func (b *Base) NeedCrop() bool {
-	return b.Crop
-}
-
-// GetCropOption get crop options
-func (b *Base) GetCropOption(name string) *image.Rectangle {
-	if cropOption := b.CropOptions[strings.Split(name, "@")[0]]; cropOption != nil {
-		return &image.Rectangle{
-			Min: image.Point{X: cropOption.X, Y: cropOption.Y},
-			Max: image.Point{X: cropOption.X + cropOption.Width, Y: cropOption.Y + cropOption.Height},
-		}
-	}
-	return nil
-}
-
 // Retrieve retrieve file content with url
 func (b Base) Retrieve(url string) (*os.File, error) {
 	return nil, errors.New("not implemented")
-}
-
-// GetSizes get configured sizes, it will be used to crop images accordingly
-func (b Base) GetSizes() map[string]*Size {
-	return map[string]*Size{}
 }
 
 // IsImage return if it is an image
@@ -446,8 +508,16 @@ func (b Base) IsSVG() bool {
 	return IsSVGFormat(b.URL())
 }
 
+func (b Base) HasFile() bool {
+	return b.FileName != ""
+}
+
 func (b Base) IsZero() bool {
-	return b.FileName == ""
+	return !b.HasFile()
+}
+
+func (b Base) Deletable() bool {
+	return b.Delete
 }
 
 // ConfigureQorMetaBeforeInitialize configure this field for Qor Admin

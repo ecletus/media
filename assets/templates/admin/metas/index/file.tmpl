@@ -3,13 +3,13 @@
 {{if $value}}
   {{if $value.IsImage}}
     {{if (index $value.GetSizes "@qor_preview")}}
-      <img src="{{$value.FullURL "@qor_preview"}}" alt="{{$value.GetFileName}}">
+      <img src="{{$value.FullURL (qor_context) "@qor_preview"}}" alt="{{$value.GetFileName}}">
     {{else}}
-      <img src="{{$value.FullURL}}" alt="{{$value.GetFileName}}">
+      <img src="{{$value.FullURL (qor_context)}}" alt="{{$value.GetFileName}}">
     {{end}}
   {{else if (eq $value.Ext ".svg")}}
-    <img src="{{$value.FullURL}}" alt="{{$value.GetFileName}}">
+    <img src="{{$value.FullURL (qor_context)}}" alt="{{$value.GetFileName}}">
   {{else}}
-    <span class="qor-table--medialibrary-file"><a href="{{$value.FullURL}}">{{$value.GetFileName}}</a></span>
+    <span class="qor-table--medialibrary-file"><a href="{{$value.FullURL (qor_context)}}">{{$value.GetFileName}}</a></span>
   {{end}}
 {{end}}
