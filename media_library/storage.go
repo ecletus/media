@@ -4,12 +4,12 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 
-	"github.com/aghape/admin"
-	"github.com/aghape/core"
-	"github.com/aghape/core/helpers"
-	"github.com/aghape/core/resource"
-	"github.com/aghape/media"
-	"github.com/aghape/media/oss"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/helpers"
+	"github.com/ecletus/core/resource"
+	"github.com/ecletus/media"
+	"github.com/ecletus/media/oss"
 	"github.com/moisespsena-go/aorm"
 )
 

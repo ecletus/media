@@ -5,7 +5,7 @@ import (
 	"io"
 	"mime/multipart"
 
-	"github.com/aghape/media"
+	"github.com/ecletus/media"
 	"gopkg.in/h2non/bimg.v1"
 )
 

@@ -19,12 +19,12 @@ import (
 
 	"github.com/moisespsena/go-error-wrap"
 
-	"github.com/aghape/admin"
-	"github.com/aghape/core"
-	"github.com/aghape/core/helpers"
-	"github.com/aghape/core/resource"
-	"github.com/aghape/core/utils"
-	"github.com/aghape/oss"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/helpers"
+	"github.com/ecletus/core/resource"
+	"github.com/ecletus/core/utils"
+	"github.com/ecletus/oss"
 	"github.com/dustin/go-humanize"
 	"github.com/gosimple/slug"
 	"github.com/jinzhu/inflection"

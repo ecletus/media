@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/aghape/media"
+	"github.com/ecletus/media"
 )
 
 type File struct {

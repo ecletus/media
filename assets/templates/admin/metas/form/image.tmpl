@@ -11,9 +11,9 @@
 <div class="qor-fieldset" data-tab-source="file">
   <textarea class="qor-file__options hidden" name="{{.InputName}}" aria-hidden="true"
     {{if ($value.Cropable)}}
-    data-cropper-title="{{t "github_com:aghape:media:form.crop_image"}}"
-    data-cropper-cancel="{{t "github_com:aghape:media:form.cancel"}}"
-    data-cropper-ok="{{t "github_com:aghape:media:form.ok"}}"
+    data-cropper-title="{{t "github_com:ecletus:media:form.crop_image"}}"
+    data-cropper-cancel="{{t "github_com:ecletus:media:form.cancel"}}"
+    data-cropper-ok="{{t "github_com:ecletus:media:form.ok"}}"
     {{end}}>{{if $value}}{{$value.Value}}{{end}}</textarea>
 
   <div class="qor-file__list">
@@ -42,7 +42,7 @@
     </ul>
   </div>
 
-  <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:aghape:media:form.choose_file"}}"
+  <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:ecletus:media:form.choose_file"}}"
     {{if not (has_update_permission .Meta)}}disabled{{end}}>
     <input class="visuallyhidden qor-file__input" id="{{.InputId}}" name="{{.InputName}}" type="file" {{if not ($value.Cropable)}}data-cropper="disabled"{{end}}>
     {{t (printf "%v.attributes.add_%v" .BaseResource.ToParam (singular (meta_label .Meta))) (printf "Add %v" (singular (meta_label .Meta)))}}

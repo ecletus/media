@@ -7,9 +7,9 @@ import (
 	"regexp"
 
 	"github.com/moisespsena-go/aorm"
-	"github.com/aghape/admin"
-	"github.com/aghape/media/oss"
-	"github.com/aghape/core/resource"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/media/oss"
+	"github.com/ecletus/core/resource"
 )
 
 // AssetManager defined a asset manager that could be used to manage assets in qor admin

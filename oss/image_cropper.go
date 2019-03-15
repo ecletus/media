@@ -7,7 +7,7 @@ import (
 	"image/gif"
 	"io"
 
-	"github.com/aghape/media"
+	"github.com/ecletus/media"
 	"github.com/moisespsena/go-error-wrap"
 
 	"github.com/disintegration/imaging"

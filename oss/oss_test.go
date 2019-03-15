@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aghape/core/test/utils"
-	"github.com/aghape/media"
-	"github.com/aghape/media/oss"
+	"github.com/ecletus/core/test/utils"
+	"github.com/ecletus/media"
+	"github.com/ecletus/media/oss"
 	"github.com/moisespsena-go/aorm"
 )
 

@@ -8,10 +8,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/core/utils"
 
-	"github.com/aghape/core"
-	"github.com/aghape/oss"
+	"github.com/ecletus/core"
+	"github.com/ecletus/oss"
 	"github.com/moisespsena-go/aorm"
 )
 

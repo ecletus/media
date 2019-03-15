@@ -5,7 +5,7 @@ import (
 
 	"github.com/moisespsena/go-error-wrap"
 
-	"github.com/aghape/core"
+	"github.com/ecletus/core"
 	"github.com/moisespsena-go/aorm"
 )
 

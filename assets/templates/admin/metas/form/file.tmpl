@@ -7,8 +7,8 @@
 
   <div class="qor-field__block qor-file {{if $value.IsImage}}qor-file__image{{end}}">
     <div class="qor-fieldset">
-      <textarea class="qor-file__options hidden" data-cropper-title="{{t "github_com:aghape:media:form.crop_image"}}" data-cropper-cancel="{{t "github_com:aghape:media:form.cancel"}}"
-                data-cropper-ok="{{t "github_com:aghape:media:form.ok"}}" name="{{.InputName}}" aria-hidden="true">{{if $value}}{{$value.Value}}{{end}}</textarea>
+      <textarea class="qor-file__options hidden" data-cropper-title="{{t "github_com:ecletus:media:form.crop_image"}}" data-cropper-cancel="{{t "github_com:ecletus:media:form.cancel"}}"
+                data-cropper-ok="{{t "github_com:ecletus:media:form.ok"}}" name="{{.InputName}}" aria-hidden="true">{{if $value}}{{$value.Value}}{{end}}</textarea>
       <div class="qor-file__list">
         {{if $value.IsImage}}
           {{if $value.GetSizes}}
@@ -41,7 +41,7 @@
                 <div class="qor-cropper__toggle--delete"><i class="material-icons">delete</i></div>
                 <div class="qor-cropper__toggle--download">
                   <a href="{{$value.FullURL (qor_context)}}" class="qor-file__action-download" download="{{$value.GetFileName}}"
-                     title="{{t "github_com:aghape:media:form.download"}}"><i class="material-icons">file_download</i></a>
+                     title="{{t "github_com:ecletus:media:form.download"}}"><i class="material-icons">file_download</i></a>
                 </div>
               </div>
             </li>
@@ -49,7 +49,7 @@
         {{end}}
       </div>
 
-      <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:aghape:media:form.choose_file"}}" {{if not (has_update_permission .Meta)}}disabled{{end}}>
+      <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:ecletus:media:form.choose_file"}}" {{if not (has_update_permission .Meta)}}disabled{{end}}>
         <input class="visuallyhidden qor-file__input" id="{{.InputId}}" name="{{.InputName}}" type="file">
         {{t (printf "%v.attributes.add_%v" .BaseResource.ToParam (singular (meta_label .Meta))) (printf "Add %v" (singular (meta_label .Meta)))}}
       </label>

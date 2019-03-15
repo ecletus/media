@@ -3,11 +3,11 @@ package media_library
 import (
 	"encoding/json"
 
-	"github.com/aghape/admin"
-	"github.com/aghape/core"
-	"github.com/aghape/core/db"
-	"github.com/aghape/core/resource"
-	"github.com/aghape/media/oss"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/db"
+	"github.com/ecletus/core/resource"
+	"github.com/ecletus/media/oss"
 	"github.com/moisespsena-go/aorm"
 )
 

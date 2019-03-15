@@ -8,17 +8,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aghape/media/reader_provider"
+	"github.com/ecletus/media/reader_provider"
 
 	"github.com/moisespsena-go/aorm"
 
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/core/utils"
 
-	"github.com/aghape/admin"
-	"github.com/aghape/core"
-	"github.com/aghape/core/helpers"
-	"github.com/aghape/core/resource"
-	"github.com/aghape/media"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/helpers"
+	"github.com/ecletus/core/resource"
+	"github.com/ecletus/media"
 )
 
 func init() {

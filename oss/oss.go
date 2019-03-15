@@ -5,12 +5,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/aghape/core"
+	"github.com/ecletus/core"
 
-	"github.com/aghape/media"
-	"github.com/aghape/oss"
-	"github.com/aghape/oss/filesystem"
-	manager "github.com/aghape/oss/manager"
+	"github.com/ecletus/media"
+	"github.com/ecletus/oss"
+	"github.com/ecletus/oss/filesystem"
+	manager "github.com/ecletus/oss/manager"
 	"github.com/moisespsena-go/aorm"
 	"github.com/moisespsena/go-path-helpers"
 )

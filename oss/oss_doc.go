@@ -1,10 +1,10 @@
 package oss
 
 import (
-	"github.com/aghape/admin"
-	"github.com/aghape/core"
-	"github.com/aghape/core/resource"
-	"github.com/aghape/media"
+	"github.com/ecletus/admin"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/resource"
+	"github.com/ecletus/media"
 	"github.com/moisespsena-go/aorm"
 )
 

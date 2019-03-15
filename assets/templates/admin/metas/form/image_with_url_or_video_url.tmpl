@@ -3,19 +3,19 @@
     <div class="qor-tab__radio">
         <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-file">
             <input type="radio" id="qor-swtichtab-file" class="mdl-radio__button ignore-dirtyform" name="{{.InputName}}.MediaType" data-tab-target="image" value="image" {{if (or (eq $value.SelectedType "image") (""))}} checked {{end}}>
-            <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.image_file" "Image File"}}</span>
+            <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.image_file" "Image File"}}</span>
         </label>
         <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-file">
             <input type="radio" id="qor-swtichtab-file" class="mdl-radio__button ignore-dirtyform" name="{{.InputName}}.MediaType" data-tab-target="image_url" value="image_url" {{if (eq $value.SelectedType "image_url")}} checked {{end}}>
-            <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.image_link" "Image Link"}}</span>
+            <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.image_link" "Image Link"}}</span>
         </label>
         <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-file">
             <input type="radio" id="qor-swtichtab-file" class="mdl-radio__button ignore-dirtyform" name="{{.InputName}}.MediaType" data-tab-target="video" value="video" {{if (eq $value.SelectedType "video")}} checked {{end}}>
-            <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.video_file" "Video File"}}</span>
+            <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.video_file" "Video File"}}</span>
         </label>
         <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-video">
             <input type="radio" id="qor-swtichtab-video" class="mdl-radio__button ignore-dirtyform" name="{{.InputName}}.MediaType" data-tab-target="video_url" value="video_url" {{if (eq $value.SelectedType "video_url")}} checked {{end}}>
-            <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.video_link" "Video Link"}}</span>
+            <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.video_link" "Video Link"}}</span>
         </label>
     </div>
 

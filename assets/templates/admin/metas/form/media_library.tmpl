@@ -4,11 +4,11 @@
   <div class="qor-tab__radio">
     <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-file">
       <input type="radio" id="qor-swtichtab-file" class="mdl-radio__button ignore-dirtyform" name="{{.InputName}}.SelectedType" data-bind-value="" data-tab-target="file" value="1" {{if not (eq $value.SelectedType "video_link")}} checked {{end}}>
-      <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.image_or_file" "Image or File"}}</span>
+      <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.image_or_file" "Image or File"}}</span>
     </label>
     <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="qor-swtichtab-video">
       <input type="radio" id="qor-swtichtab-video" class="mdl-radio__button ignore-dirtyform" data-tab-target="video_link" name="{{.InputName}}.SelectedType" data-bind-value="video_link" value="2" {{if (eq $value.SelectedType "video_link")}} checked {{end}}>
-      <span class="mdl-radio__label">{{t "github_com:aghape:media:media_switcher.video_link" "Video Link"}}</span>
+      <span class="mdl-radio__label">{{t "github_com:ecletus:media:media_switcher.video_link" "Video Link"}}</span>
     </label>
   </div>
 
@@ -16,15 +16,15 @@
 
     <!-- Start: other files form -->
     <div class="qor-fieldset" data-tab-source="file" {{if (eq $value.SelectedType "video_link")}} style="display: none;" {{end}}>
-      <textarea class="qor-file__options hidden" data-cropper-title="{{t "github_com:aghape:media:form.crop_image" "Crop image"}}"
-                data-cropper-cancel="{{t "github_com:aghape:media:form.cancel" "Cancel"}}" data-cropper-ok="{{t "github_com:aghape:media:form.ok" "OK"}}"
+      <textarea class="qor-file__options hidden" data-cropper-title="{{t "github_com:ecletus:media:form.crop_image" "Crop image"}}"
+                data-cropper-cancel="{{t "github_com:ecletus:media:form.cancel" "Cancel"}}" data-cropper-ok="{{t "github_com:ecletus:media:form.ok" "OK"}}"
                 name="{{.InputName}}" aria-hidden="true">{{if $value}}{{$value.Export (qor_context)}}{{end}}</textarea>
 
       <!-- If is image or videos, show description input -->
       <div class="qor-field qor-medialibrary__image-desc">
         <div class="mdl-textfield mdl-textfield--full-width mdl-js-textfield">
           <label class="qor-field__label mdl-textfield__label" for="ProductImage_desc">
-            {{t "github_com:aghape:media:form.description_for_accessibility" "Description for Accessibility"}}
+            {{t "github_com:ecletus:media:form.description_for_accessibility" "Description for Accessibility"}}
           </label>
           <div class="qor-field__edit">
             <input class="mdl-textfield__input qor-medialibrary__desc" id="ProductImage_desc" type="text" value="" data-image-info="{{$value.Value}}" />
@@ -68,7 +68,7 @@
                 <div class="qor-cropper__toggle--delete"><i class="material-icons">delete</i></div>
                 <div class="qor-cropper__toggle--download">
                   <a href="{{$value.FullURL (qor_context)}}" class="qor-file__action-download" download="{{$value.GetFileName}}"
-                     title="{{t "github_com:aghape:media:form.download" "Download"}}"><i class="material-icons">file_download</i></a>
+                     title="{{t "github_com:ecletus:media:form.download" "Download"}}"><i class="material-icons">file_download</i></a>
                 </div>
               </div>
             </li>
@@ -78,7 +78,7 @@
       {{end}}
       </div>
 
-      <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:aghape:media:form.choose_file" "Choose File"}}"
+      <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:ecletus:media:form.choose_file" "Choose File"}}"
              {{if not (has_update_permission .Meta)}}disabled{{end}}>
         <input class="visuallyhidden qor-file__input" id="{{.InputId}}" name="{{.InputName}}" type="file">
         {{t (printf "%v.attributes.add_%v" .BaseResource.ToParam (singular (meta_label .Meta))) (printf "Add %v" (singular (meta_label .Meta)))}}
@@ -91,7 +91,7 @@
         <div class="qor-field">
             <div class="mdl-textfield mdl-textfield--full-width mdl-js-textfield">
                 <label class="qor-field__label mdl-textfield__label" for="ProductVideo_desc">
-                {{t "github_com:aghape:media:media_library.video_url" "Video URL"}}
+                {{t "github_com:ecletus:media:media_library.video_url" "Video URL"}}
                 </label>
                 <input type="text" class="mdl-textfield__input qor-video__link" name="{{.InputName}}.Video" value="{{$value.Video}}" id="ProductVideo_desc" />
             </div>
@@ -101,7 +101,7 @@
         <div class="qor-field qor-medialibrary__video-desc">
             <div class="mdl-textfield mdl-textfield--full-width mdl-js-textfield">
                 <label class="qor-field__label mdl-textfield__label">
-                {{t "github_com:aghape:media:form.video_description_for_accessibility" "Video Description for Accessibility"}}
+                {{t "github_com:ecletus:media:form.video_description_for_accessibility" "Video Description for Accessibility"}}
                 </label>
                 <div class="qor-field__edit">
                     <input class="mdl-textfield__input qor-medialibrary__desc" type="text" value="" data-image-info="{{$value.Value}}" />

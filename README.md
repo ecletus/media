@@ -2,7 +2,7 @@
 
 Media Library is a [Golang](http://golang.org/) library that supports the upload of files/images to a filesystem or cloud storage. The Plugin includes cropping and resizing features for images.
 
-[![GoDoc](https://godoc.org/github.com/aghape/media_library?status.svg)](https://godoc.org/github.com/aghape/media_library)
+[![GoDoc](https://godoc.org/github.com/ecletus/media_library?status.svg)](https://godoc.org/github.com/ecletus/media_library)
 
 ## Documentation
 

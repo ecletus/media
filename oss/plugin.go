@@ -3,10 +3,10 @@ package oss
 import (
 	"path/filepath"
 
-	"github.com/aghape/db"
+	"github.com/ecletus/db"
 
-	"github.com/aghape/core"
-	"github.com/aghape/plug"
+	"github.com/ecletus/core"
+	"github.com/ecletus/plug"
 )
 
 type Plugin struct {

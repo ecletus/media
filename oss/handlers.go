@@ -9,7 +9,7 @@ import (
 	"image/png"
 	"mime/multipart"
 
-	"github.com/aghape/media"
+	"github.com/ecletus/media"
 
 	"github.com/disintegration/imaging"
 )

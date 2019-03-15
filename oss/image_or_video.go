@@ -1,7 +1,7 @@
 package oss
 
 import (
-	"github.com/aghape/media/reader_provider"
+	"github.com/ecletus/media/reader_provider"
 )
 
 type ImageOrVideoType string

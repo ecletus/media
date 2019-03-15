@@ -1,6 +1,6 @@
 package oss
 
-import "github.com/aghape/media"
+import "github.com/ecletus/media"
 
 type Video struct {
 	OSS

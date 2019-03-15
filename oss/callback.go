@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/aghape/media"
+	"github.com/ecletus/media"
 	"mime/multipart"
 	"reflect"
 
 	"github.com/dsnet/golib/memfile"
 
-	"github.com/aghape/core"
+	"github.com/ecletus/core"
 
-	"github.com/aghape/serializable_meta"
+	"github.com/ecletus/serializable_meta"
 	"github.com/moisespsena-go/aorm"
 )
 
