@@ -17,7 +17,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/moisespsena/go-error-wrap"
+	"github.com/moisespsena-go/error-wrap"
 
 	"github.com/ecletus/admin"
 	"github.com/ecletus/core"

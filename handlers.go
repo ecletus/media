@@ -4,7 +4,7 @@ import (
 	_ "image/jpeg"
 	"mime/multipart"
 
-	"github.com/moisespsena/go-error-wrap"
+	"github.com/moisespsena-go/error-wrap"
 )
 
 var mediaHandlers = make(map[string]MediaHandler)

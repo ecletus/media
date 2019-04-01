@@ -3,7 +3,7 @@ package media
 import (
 	"reflect"
 
-	"github.com/moisespsena/go-error-wrap"
+	"github.com/moisespsena-go/error-wrap"
 
 	"github.com/ecletus/core"
 	"github.com/moisespsena-go/aorm"

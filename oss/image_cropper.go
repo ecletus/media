@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/ecletus/media"
-	"github.com/moisespsena/go-error-wrap"
+	"github.com/moisespsena-go/error-wrap"
 
 	"github.com/disintegration/imaging"
 )
