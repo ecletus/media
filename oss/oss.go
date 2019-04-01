@@ -12,7 +12,7 @@ import (
 	"github.com/ecletus/oss/filesystem"
 	manager "github.com/ecletus/oss/manager"
 	"github.com/moisespsena-go/aorm"
-	"github.com/moisespsena/go-path-helpers"
+	"github.com/moisespsena-go/path-helpers"
 )
 
 var (
