@@ -2,7 +2,7 @@ package asset_manager
 
 import (
 	"github.com/moisespsena-go/aorm"
-	"github.com/moisespsena/go-pluggable"
+	"github.com/moisespsena-go/pluggable"
 )
 
 type Plugin struct {
