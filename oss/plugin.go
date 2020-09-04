@@ -3,6 +3,8 @@ package oss
 import (
 	"path/filepath"
 
+	"github.com/ecletus/media"
+
 	"github.com/ecletus/db"
 
 	"github.com/ecletus/core"
@@ -13,6 +15,10 @@ type Plugin struct {
 	db.DBNames
 	plug.EventDispatcher
 	SetupConfigKey string
+}
+
+func (p *Plugin) After() []interface{} {
+	return []interface{}{&media.Plugin{}}
 }
 
 func (p *Plugin) RequireOptions() []string {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ecletus/admin"
 	"github.com/ecletus/core"
-	"github.com/ecletus/core/db"
 	"github.com/ecletus/core/resource"
 	"github.com/ecletus/media/oss"
 	"github.com/moisespsena-go/aorm"
@@ -33,17 +32,17 @@ type MediaLibraryInterface interface {
 	SetSelectedType(string)
 	GetSelectedType() string
 	GetMediaOption(ctx *core.Context) MediaOption
-	Init(site core.SiteInterface)
+	Init(site *core.Site)
 }
 
 type QorMediaLibrary struct {
-	aorm.KeyStringSerial
+	aorm.Model
 	SelectedType string
 	File         MediaLibraryStorage `sql:"type:text;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
 }
 
-func (mediaLibrary *QorMediaLibrary) Init(site core.SiteInterface) {
-	mediaLibrary.File.Init(site, db.FieldCache.Get(mediaLibrary, "File"))
+func (mediaLibrary *QorMediaLibrary) Init(site *core.Site) {
+	mediaLibrary.File.Init(site, aorm.StructOf(mediaLibrary).MustCreateFieldByName(mediaLibrary, "File"))
 }
 
 func (mediaLibrary *QorMediaLibrary) ScanMediaOptions(mediaOption MediaOption) error {
@@ -75,7 +74,7 @@ func (mediaLibrary *QorMediaLibrary) GetSelectedType() string {
 	return mediaLibrary.SelectedType
 }
 
-func (QorMediaLibrary) ConfigureQorResource(res resource.Resourcer) {
+func (QorMediaLibrary) ConfigureResource(res resource.Resourcer) {
 	if res, ok := res.(*admin.Resource); ok {
 		res.UseTheme("grid")
 		res.UseTheme("media_library")

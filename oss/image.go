@@ -19,6 +19,7 @@ import (
 	"github.com/ecletus/core/helpers"
 	"github.com/ecletus/core/resource"
 	"github.com/ecletus/media"
+	"github.com/moisespsena-go/getters"
 )
 
 func init() {
@@ -124,7 +125,7 @@ func (img Image) SystemNames() []string {
 	return append(names, IMAGE_STYLE_PREVIEW, IMAGE_STYLE_ORIGNAL)
 }
 
-func (img *Image) Export(ctx *core.Context) (string, error) {
+func (img Image) Export(ctx *core.Context) (string, error) {
 	if img.Storage() != nil {
 		var url = helpers.GetStorageEndpointFromContext(ctx, img.Storage())
 		img.Url = media.MediaURL(url, img.Url)
@@ -215,11 +216,8 @@ func (img *Image) MediaScan(ctx *media.Context, data interface{}) (err error) {
 	case string:
 		err = img.MediaScan(ctx, []byte(values))
 	case []string:
-		for _, str := range values {
-			if err = img.Scan([]byte(str)); err != nil {
-				return err
-			}
-		}
+		// only first value
+		return img.Scan([]byte(values[0]))
 	case *os.File:
 		img.OriginalSize = Size{}
 		img.Sizes = nil
@@ -252,7 +250,7 @@ func (img *Image) ConfigureQorMetaBeforeInitialize(metaor resource.Metaor) {
 	}
 }
 
-func (img *Image) Init(site core.SiteInterface, field *aorm.Field) {
+func (img *Image) Init(site *core.Site, field *aorm.Field) {
 	img.OSS.Init(site, field)
 	img.GetOrSetFieldOption().ParseFieldTag("image", &field.Tag)
 }
@@ -274,13 +272,13 @@ func ImageMetaOnDefaultValue(meta *admin.Meta, cb func(e *admin.MetaValuerEvent)
 }
 
 func ImageMetaGetDefaultURL(meta *admin.Meta, recorde interface{}, ctx *core.Context) (url string) {
-	return meta.TriggerValuerEvent(E_DEFAULT_IMAGE_URL, recorde, ctx, nil, "").(string)
+	return meta.MustTriggerValuerEvent(E_DEFAULT_IMAGE_URL, recorde, ctx, nil, "").(string)
 }
 
 func GetImageStyle(ctx *core.Context) string {
 	style := ctx.URLParam("image_style")
 	if style == "" {
-		style = ctx.Data().GetString("image_style")
+		style, _ = getters.String(ctx, "image_style")
 	}
 	return style
 }
@@ -305,16 +303,18 @@ func ImageMetaURL(meta *admin.Meta, key, defaultStyle string) *admin.Meta {
 			}
 
 			if meta.IsZero(recorde, v) {
-				func() {
-					defer ctx.Data().With()
-					ctx.Data().Set("image_style", style)
-					v = ImageMetaGetDefaultURL(meta, recorde, ctx)
-				}()
-			}
-
-			if meta.IsZero(recorde, v) {
 				return ""
 			}
+
+			/*
+
+				func() {
+					defer ctx.BackupValues()()
+
+			ctx.SetValue("image_style", style)
+			v = ImageMetaGetDefaultURL(meta, recorde, ctx)
+				}()
+			 */
 
 			switch vt := v.(type) {
 			case string:
@@ -339,7 +339,7 @@ func ImageMetaURL(meta *admin.Meta, key, defaultStyle string) *admin.Meta {
 				s = utils.StringifyContext(vt, ctx)
 			}
 			if s != "" && !strings.Contains(s, "//") {
-				s = ctx.GenGlobalStaticURL(s)
+				s = ctx.Top().JoinStaticURL(s)
 			}
 			return s
 		},

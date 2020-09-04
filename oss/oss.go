@@ -49,7 +49,7 @@ var DefaultStoreHandler = func(storage oss.StorageInterface, path string, option
 	return err
 }
 
-func (o *OSS) Init(site core.SiteInterface, field *aorm.Field) {
+func (o *OSS) Init(site *core.Site, field *aorm.Field) {
 	o.Base.Init(site, field)
 	o.GetOrSetFieldOption().ParseFieldTag("oss", &field.Tag)
 }

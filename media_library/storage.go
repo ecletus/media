@@ -32,7 +32,7 @@ func (b MediaLibraryStorage) HasVideo() bool {
 	return b.Video != "" || (b.HasFile() && b.IsVideo())
 }
 
-func (b *MediaLibraryStorage) Init(site core.SiteInterface, field *aorm.Field) {
+func (b *MediaLibraryStorage) Init(site *core.Site, field *aorm.Field) {
 	b.Image.Init(site, field)
 	b.GetOrSetFieldOption().ParseFieldTag("media_library", &field.Tag)
 }

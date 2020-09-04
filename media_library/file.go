@@ -1,16 +1,17 @@
 package media_library
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 	"strings"
+
+	"github.com/moisespsena-go/bid"
 
 	"github.com/ecletus/media"
 )
 
 type File struct {
-	ID          json.Number
+	ID          bid.BID
 	Url         string
 	VideoLink   string
 	FileName    string

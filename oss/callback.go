@@ -163,7 +163,7 @@ func saveAndCropImage(isCreate bool) func(scope *aorm.Scope) {
 
 				handleNestedCrop = func(record interface{}) {
 					newScope := scope.New(record)
-					for _, field := range newScope.Fields() {
+					for _, field := range newScope.Instance().Fields {
 						if changed = saveField(field, scope); changed {
 							continue
 						}
@@ -188,9 +188,13 @@ func saveAndCropImage(isCreate bool) func(scope *aorm.Scope) {
 			}
 
 			// Handle Normal Field
-			for _, field := range scope.Fields() {
+			for _, field := range scope.Instance().Fields {
 				if saveField(field, scope) && isCreate {
-					updateColumns[field.DBName] = field.Field.Interface()
+					if oss, ok := field.Field.Addr().Interface().(OSSInterface); ok {
+						if !oss.IsZero() {
+							updateColumns[field.DBName] = oss
+						}
+					}
 				}
 			}
 
@@ -203,6 +207,6 @@ func saveAndCropImage(isCreate bool) func(scope *aorm.Scope) {
 
 // RegisterCallbacks register callback into GORM DB
 func RegisterCallbacks(db *aorm.DB) {
-	db.Callback().Update().Before("gorm:before_update").Register(E_SAVE_AND_CROP, saveAndCropImage(false))
+	db.Callback().Update().Before("aorm:before_save").Register(E_SAVE_AND_CROP, saveAndCropImage(false))
 	db.Callback().Create().After("gorm:after_create").Register(E_SAVE_AND_CROP, saveAndCropImage(true))
 }

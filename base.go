@@ -3,6 +3,7 @@ package media
 import (
 	"bytes"
 	"database/sql/driver"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,15 +18,15 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/moisespsena-go/error-wrap"
+	errwrap "github.com/moisespsena-go/error-wrap"
 
+	"github.com/dustin/go-humanize"
 	"github.com/ecletus/admin"
 	"github.com/ecletus/core"
 	"github.com/ecletus/core/helpers"
 	"github.com/ecletus/core/resource"
 	"github.com/ecletus/core/utils"
 	"github.com/ecletus/oss"
-	"github.com/dustin/go-humanize"
 	"github.com/gosimple/slug"
 	"github.com/jinzhu/inflection"
 	"github.com/moisespsena-go/aorm"
@@ -33,7 +34,7 @@ import (
 
 var (
 	// URLTemplate default URL template
-	URLTemplate = "/system/{{class}}/{{primary_key}}/{{column}}/{{filename_slug}}"
+	URLTemplate = "/system/{{class}}/{{primary_key_path}}/{{column}}/{{filename_slug}}"
 )
 
 type FullURL interface {
@@ -88,15 +89,19 @@ type Base struct {
 	Delete      bool       `json:"-"`
 	FileHeader  FileHeader `json:"-"`
 	Reader      io.Reader  `json:"-"`
-	site        core.SiteInterface
+	site        *core.Site
 	storage     oss.NamedStorageInterface
 	field       *aorm.Field
 	fieldOption *Option
 	old         []string
 }
 
-func (Base) GormDataType(dialect aorm.Dialect) string {
-	return "text"
+func (Base) AormDataType(dialect aorm.Dialector) string {
+	switch dialect.GetName() {
+	case "postgres":
+		return "JSONB"
+	}
+	return "TEXT"
 }
 
 func (b *Base) Store(url string, reader io.Reader) error {
@@ -115,11 +120,11 @@ func (b *Base) SystemNames() (names []string) {
 	return names
 }
 
-func (b *Base) Site() core.SiteInterface {
+func (b *Base) Site() *core.Site {
 	return b.site
 }
 
-func (b *Base) SetSite(site core.SiteInterface) {
+func (b *Base) SetSite(site *core.Site) {
 	b.site = site
 }
 
@@ -197,10 +202,11 @@ func (b *Base) Set(ctx *Context, data interface{}) (err error) {
 	)
 
 	if m.HasFile() {
-		currentUrls := []string{m.URL()}
-
+		var currentUrls = []string{b.Url}
 		for _, key := range m.AllNames(m) {
-			currentUrls = append(currentUrls, m.URL(key))
+			if url := m.URL(key); url != "" {
+				currentUrls = append(currentUrls, url)
+			}
 		}
 
 		defer func() {
@@ -363,7 +369,7 @@ func (b *Base) Scan(data interface{}) (err error) {
 
 func (b Base) DBValue(media Media) (driver.Value, error) {
 	if media.IsZero() {
-		return "", nil
+		return nil, nil
 	}
 	results, err := json.Marshal(media)
 	return string(results), err
@@ -394,7 +400,7 @@ func (b *Base) AfterScan(db *aorm.DB, field *aorm.Field) {
 	b.Init(core.GetSiteFromDB(db), field)
 }
 
-func (b *Base) Init(site core.SiteInterface, field *aorm.Field) {
+func (b *Base) Init(site *core.Site, field *aorm.Field) {
 	if b.site == nil {
 		b.site = site
 	}
@@ -460,10 +466,22 @@ func getFuncMap(scope *aorm.Scope, field *aorm.Field, filename string) template.
 		return slug.Make(strings.TrimSuffix(path.Base(filename), path.Ext(filename)))
 	}
 	return template.FuncMap{
-		"class":       func() string { return inflection.Plural(utils.ToParamString(scope.GetModelStruct().ModelType.Name())) },
-		"primary_key": func() string { return fmt.Sprintf("%v", scope.PrimaryKeyValue()) },
-		"column":      func() string { return strings.ToLower(field.Name) },
-		"filename":    func() string { return filename },
+		"class":       func() string { return inflection.Plural(utils.ToParamString(scope.Struct().Type.Name())) },
+		"primary_key": func() string { return fmt.Sprintf("%v", scope.PrimaryKey()) },
+		"primary_key_path": func() string {
+			var b = base64.RawURLEncoding.EncodeToString(scope.Instance().ID().Bytes())
+			var parts = []string{}
+			for i := 0; len(b) > (2+i) && len(parts) < 3; i++ {
+				parts = append(parts, b[0:2+i])
+				b = b[2+i:]
+			}
+			if len(b) > 0 {
+				parts = append(parts, b)
+			}
+			return strings.Join(parts, "/")
+		},
+		"column":   func() string { return strings.ToLower(field.Name) },
+		"filename": func() string { return filename },
 		"filename_slug": func() string {
 			return urlReplacer.ReplaceAllString(slugFileName()+path.Ext(filename), "-")
 		},
@@ -524,7 +542,7 @@ func (b Base) Deletable() bool {
 func (Base) ConfigureQorMetaBeforeInitialize(meta resource.Metaor) {
 	if meta, ok := meta.(*admin.Meta); ok {
 		if meta.Type == "" {
-			meta.Type = "file"
+			meta.Type = "media_file"
 		}
 
 		if meta.GetFormattedValuer() == nil {

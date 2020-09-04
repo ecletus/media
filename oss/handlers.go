@@ -2,6 +2,7 @@ package oss
 
 import (
 	"bytes"
+	"github.com/pkg/errors"
 	"image"
 	"image/draw"
 	"image/gif"
@@ -50,8 +51,12 @@ func (imageHandler) Handle(m media.Media, file multipart.File, option *media.Opt
 					}
 				}
 
-				gif.EncodeAll(&buffer, g)
-				im.Store(im.URL(), &buffer)
+				if err = gif.EncodeAll(&buffer, g); err != nil {
+					return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: gif encode all")
+				}
+				if err = im.Store(im.URL(), &buffer); err != nil {
+					return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: store")
+				}
 			} else {
 				return err
 			}
@@ -73,8 +78,12 @@ func (imageHandler) Handle(m media.Media, file multipart.File, option *media.Opt
 					var result bytes.Buffer
 					g.Config.Width = size.Width
 					g.Config.Height = size.Height
-					gif.EncodeAll(&result, g)
-					im.Store(im.URL(key), &result)
+					if err = gif.EncodeAll(&result, g); err != nil {
+						return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: gif encode all")
+					}
+					if err = im.Store(im.URL(key), &result); err != nil {
+						return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: store")
+					}
 				}
 			}
 		} else {
@@ -98,8 +107,12 @@ func (imageHandler) Handle(m media.Media, file multipart.File, option *media.Opt
 				}
 
 				// Save default image
-				imaging.Encode(&buffer, img, *format)
-				im.Store(im.URL(IMAGE_STYLE_ORIGNAL), &buffer)
+				if err = imaging.Encode(&buffer, img, *format); err != nil {
+					return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: gif encode all")
+				}
+				if err = im.Store(im.URL(IMAGE_STYLE_ORIGNAL), &buffer); err != nil {
+					return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: store")
+				}
 
 				// save sizes image
 				for key, size := range im.GetSizes() {
@@ -113,8 +126,12 @@ func (imageHandler) Handle(m media.Media, file multipart.File, option *media.Opt
 
 					dst := imaging.Thumbnail(newImage, size.Width, size.Height, imaging.Lanczos)
 					var buffer bytes.Buffer
-					imaging.Encode(&buffer, dst, *format)
-					im.Store(im.URL(key), &buffer)
+					if err = imaging.Encode(&buffer, dst, *format); err != nil {
+						return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: imaging encode all")
+					}
+					if err = im.Store(im.URL(key), &buffer); err != nil {
+						return errors.Wrap(err, "ecletus/media/oss.imageHandler#Handle: store")
+					}
 				}
 			} else {
 				return err

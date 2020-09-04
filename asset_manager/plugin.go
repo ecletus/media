@@ -10,8 +10,8 @@ type Plugin struct {
 	DBName string
 }
 
-func (p *Plugin) OnRegister(dis pluggable.PluginEventDispatcherInterface) {
-	p.On("setup_db:gorm:" + p.DBName, func(e pluggable.PluginEventInterface) error {
+func (p *Plugin) OnRegister(options *pluggable.Options) {
+	p.On("setup_db:gorm:"+p.DBName, func(e pluggable.PluginEventInterface) error {
 		return e.Data().(*aorm.DB).AutoMigrate(&AssetManager{}).Error
 	})
 }

@@ -27,11 +27,11 @@ type Media interface {
 
 	sql.Scanner
 
-	Site() core.SiteInterface
-	SetSite(site core.SiteInterface)
+	Site() *core.Site
+	SetSite(site *core.Site)
 	Storage() oss.NamedStorageInterface
 	SetStorage(storage oss.NamedStorageInterface)
-	Init(site core.SiteInterface, field *aorm.Field)
+	Init(site *core.Site, field *aorm.Field)
 	FieldOption() *Option
 	SetFieldOption(option *Option)
 

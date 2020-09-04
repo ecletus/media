@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"reflect"
 
@@ -82,8 +83,8 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 			}
 
 			if _, ok := config.RemoteDataResource.Resource.Value.(MediaLibraryInterface); !ok {
-				utils.ExitWithMsg("%v havn't implement MediaLibraryInterface, please fix that.",
-					reflect.TypeOf(config.RemoteDataResource.Resource.Value))
+				panic(fmt.Errorf("%v havn't implement MediaLibraryInterface, please fix that.",
+					reflect.TypeOf(config.RemoteDataResource.Resource.Value)))
 			}
 
 			config.RemoteDataResource.Resource.Meta(&admin.Meta{
@@ -176,7 +177,11 @@ func (mediaBox MediaBox) ConfigureQorMeta(metaor resource.Metaor) {
 
 func (mediaBox MediaBox) Crop(context *core.Context, res *admin.Resource, db *aorm.DB, mediaOption MediaOption) (err error) {
 	for _, file := range mediaBox.Files {
-		context := &core.Context{ResourceID: string(file.ID), DB: db}
+		var ID aorm.ID
+		if ID, err = res.ModelStruct.DefaultID().SetValue(file.ID); err != nil {
+			return
+		}
+		context := (&core.Context{ResourceID: ID}).SetRawDB(db)
 		record := res.NewStruct(context.Site)
 		crud := res.Crud(context)
 		if err = crud.FindOne(record); err == nil {

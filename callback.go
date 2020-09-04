@@ -20,10 +20,22 @@ func IsIgnoreCallback(v interface{}) bool {
 	switch t := v.(type) {
 	case *aorm.DB:
 		v, ok := t.Get(DB_DELETE_IGNORE)
-		return v != nil && ok
+		if v != nil && ok {
+			return true
+		}
+
+		if t.GetBool("aorm:update_column") {
+			return true
+		}
 	case *aorm.Scope:
 		v, ok := t.Get(DB_DELETE_IGNORE)
-		return v != nil && ok
+		if v != nil && ok {
+			return true
+		}
+
+		if t.GetBool("aorm:update_column") {
+			return true
+		}
 	}
 	return false
 }
@@ -34,6 +46,7 @@ func deleteField(field *aorm.Field, scope *aorm.Scope) (changed bool) {
 			media.Init(core.GetSiteFromDB(scope.DB()), field)
 
 			for _, url := range media.OlderURL() {
+				if url == "" {continue}
 				if _, err := media.Remove(url); err != nil {
 					scope.Err(errwrap.Wrap(err, "Remove OLD media %q", url))
 					return false
@@ -64,7 +77,7 @@ func deleteCallback(scope *aorm.Scope) {
 		// TODO: Handle update attrs
 		// "gorm:update_attrs"
 		// Handle Normal Field
-		for _, field := range scope.Fields() {
+		for _, field := range scope.Instance().Fields {
 			deleteField(field, scope)
 		}
 	}
