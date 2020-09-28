@@ -5,49 +5,67 @@
   {{meta_label .Meta}}
 </label>
 
-<div class="qor-field__block qor-file qor-file__image">
+{{$help := meta_record_help .Meta .Record}}
+{{if $help}}
+    <div class="qor-field__help">{{$help}}</div>
+{{end}}
 
-<!-- Start: file form -->
-<div class="qor-fieldset" data-tab-source="file">
-  <textarea class="qor-file__options hidden" name="{{.InputName}}" aria-hidden="true"
-    {{if ($value.Cropable)}}
-    data-cropper-title="{{t "github_com:ecletus:media:form.crop_image"}}"
-    data-cropper-cancel="{{t "github_com:ecletus:media:form.cancel"}}"
-    data-cropper-ok="{{t "github_com:ecletus:media:form.ok"}}"
-    {{end}}>{{if $value}}{{$value.Value}}{{end}}</textarea>
+{{if .ReadOnly}}
+    <a href="javascript:void(0);" data-url="{{.Meta.Config.StyleURL (qor_context) .Record}}" data-image="true">
+        <img src="{{.Value}}" />
+    </a>
+{{else}}
+    <div class="qor-field__block qor-file qor-file__image">
 
-  <div class="qor-file__list">
-    <ul>
-      {{if ($value.Cropable)}}
-        {{if not ($value.OriginalSizeDefined)}}
-          <li>
-              <img src="{{$value.FullURLU (qor_context)}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="original">
-          </li>
-        {{end}}
-        {{if $value.GetSizes}}
-          {{range $key, $v := $value.GetSizes}}
-            {{if not (is_included $key "@")}}
+    <!-- Start: file form -->
+    <div class="qor-fieldset" data-tab-source="file">
+      <textarea class="qor-file__options hidden" name="{{.InputName}}" aria-hidden="true"
+        {{if ($value.Cropable)}}
+        data-cropper-title="{{t "github_com:ecletus:media:form.crop_image"}}"
+        data-cropper-cancel="{{t "github_com:ecletus:media:form.cancel"}}"
+        data-cropper-ok="{{t "github_com:ecletus:media:form.ok"}}"
+        {{end}}>{{if $value}}{{$value.Value}}{{end}}</textarea>
+
+      <div class="qor-file__list">
+        <ul>
+          {{if ($value.Cropable)}}
+            {{if not ($value.OriginalSizeDefined)}}
               <li>
-                <img src="{{$value.FullURLU (qor_context) $key}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="{{$key}}" data-size-resolution='{{marshal $v}}'>
-                <span>{{$key}} ({{$v.Width}}&times;{{$v.Height}} px)</span>
+                  <img src="{{$value.FullURLU (qor_context)}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="original">
               </li>
             {{end}}
+            {{if $value.GetSizes}}
+              {{range $key, $v := $value.GetSizes}}
+                {{if not (is_included $key "@")}}
+                  <li>
+                    <img src="{{$value.FullURLU (qor_context) $key}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="{{$key}}" data-size-resolution='{{marshal $v}}'>
+                    <span>{{$key}} ({{$v.Width}}&times;{{$v.Height}} px)</span>
+                  </li>
+                {{end}}
+              {{end}}
+            {{else}}
+                <li><img src="{{$value.FullURLU (qor_context)}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
+            {{end}}
+          {{else}}
+              <li><img src="{{$value.FullURLU (qor_context)}}" alt="{{$value.GetFileName}}"></li>
           {{end}}
-        {{else}}
-            <li><img src="{{$value.FullURLU (qor_context)}}" data-original-url="{{$value.FullURLU (qor_context)}}" data-size-name="original" alt="{{$value.GetFileName}}"></li>
-        {{end}}
-      {{else}}
-          <li><img src="{{$value.FullURLU (qor_context)}}" alt="{{$value.GetFileName}}"></li>
-      {{end}}
-    </ul>
-  </div>
+        </ul>
+      </div>
 
-  <label class="mdl-button mdl-button--primary qor-button__icon-add" title="{{t "github_com:ecletus:media:form.choose_file"}}"
-    {{if not (has_update_permission .Meta)}}disabled{{end}}>
-    <input class="visuallyhidden qor-file__input" id="{{.InputId}}" name="{{.InputName}}" type="file" {{if not ($value.Cropable)}}data-cropper="disabled"{{end}}>
-    {{t (printf "%v.attributes.add_%v" .BaseResource.ToParam (singular (meta_label .Meta))) (printf "Add %v" (singular (meta_label .Meta)))}}
-  </label>
-</div>
-<!-- End: file form -->
-</div>
+      <label style="min-width: 0; line-height: initial;" title="{{t "github_com:ecletus:media:form.choose_file"}}"
+        {{if not (has_update_permission .Meta)}}disabled{{end}}>
+        <input class="visuallyhidden qor-file__input" id="{{.InputId}}" name="{{.InputName}}" type="file" {{if not ($value.Cropable)}}data-cropper="disabled"{{end}}>
+          <span class="mdl-button mdl-js-button mdl-button--icon qor-input__icon">
+              <i class="material-icons">add</i>
+          </span>
+      </label>
+        {{if and .Meta.Config.SvgDisabled (has_update_permission .Meta)}}
+            <button style="display: none" id="{{.InputId}}-take-picture" title="{{t "github_com:ecletus:media:form.take_capture"}}" class="mdl-button mdl-js-button mdl-button--icon qor-input__icon" type="button">
+                <i class="material-icons">camera_alt</i>
+            </button>
+        {{end}}
+    </div>
+    <!-- End: file form -->
+    </div>
+{{end}}
 </div>

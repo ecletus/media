@@ -14,12 +14,13 @@ import (
 
 	"github.com/ecletus/core/utils"
 
-	"github.com/ecletus/admin"
 	"github.com/ecletus/core"
 	"github.com/ecletus/core/helpers"
 	"github.com/ecletus/core/resource"
-	"github.com/ecletus/media"
 	"github.com/moisespsena-go/getters"
+
+	"github.com/ecletus/admin"
+	"github.com/ecletus/media"
 )
 
 func init() {
@@ -238,16 +239,8 @@ func (img *Image) MediaScan(ctx *media.Context, data interface{}) (err error) {
 	return nil
 }
 
-func (img *Image) ConfigureQorMetaBeforeInitialize(metaor resource.Metaor) {
-	if meta, ok := metaor.(*admin.Meta); ok {
-		if meta.Type == "" {
-			meta.Type = "image"
-		}
-		img.OSS.ConfigureQorMetaBeforeInitialize(meta)
-		meta.DefaultValueFunc = func(recorde interface{}, context *core.Context) interface{} {
-			return Image{}
-		}
-	}
+func (img *Image) ConfigureQorMetaBeforeInitialize(meta resource.Metaor) {
+	meta.(*admin.Meta).Tags.Tags.Set("SINGLE_EDIT_DISABLED", "SINGLE_EDIT_DISABLED")
 }
 
 func (img *Image) Init(site *core.Site, field *aorm.Field) {
@@ -256,7 +249,7 @@ func (img *Image) Init(site *core.Site, field *aorm.Field) {
 }
 
 func (Image) MaxSize() uint64 {
-	return 1024 * 1024 //1MB
+	return 1024 * 1024 // 1MB
 }
 
 func (Image) FileTypes() []string {
@@ -308,13 +301,13 @@ func ImageMetaURL(meta *admin.Meta, key, defaultStyle string) *admin.Meta {
 
 			/*
 
-				func() {
-					defer ctx.BackupValues()()
+					func() {
+						defer ctx.BackupValues()()
 
-			ctx.SetValue("image_style", style)
-			v = ImageMetaGetDefaultURL(meta, recorde, ctx)
-				}()
-			 */
+				ctx.SetValue("image_style", style)
+				v = ImageMetaGetDefaultURL(meta, recorde, ctx)
+					}()
+			*/
 
 			switch vt := v.(type) {
 			case string:
